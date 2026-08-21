@@ -12,8 +12,13 @@ struct DeviceView: View {
                 Text("选择设备").font(.headline)
                 HStack {
                     Spacer()
-                    Button("完成") { dismiss() }
-                        .buttonStyle(.glass)
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
+                            .frame(width: 24, height: 24)
+                    }
+                    .buttonStyle(.glass)
+                    .buttonBorderShape(.circle)
+                    .accessibilityLabel("关闭")
                 }
             }
             .padding(.horizontal, 20)
@@ -41,8 +46,6 @@ struct DeviceView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(16)
-                .background(Color(uiColor: .secondarySystemGroupedBackground), in: .rect(cornerRadius: 20))
 
                 if !bluetooth.canSendLocation {
                     VStack(alignment: .leading, spacing: 12) {
@@ -84,8 +87,6 @@ struct DeviceView: View {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
-                    .background(Color(uiColor: .secondarySystemGroupedBackground), in: .rect(cornerRadius: 20))
                 }
             }
             .padding(20)
