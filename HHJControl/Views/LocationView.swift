@@ -26,9 +26,7 @@ struct LocationView: View {
                         Spacer()
                         VStack(spacing: 10) {
                             Button { showDevices = true } label: {
-                                Image(systemName: "bluetooth")
-                                    .font(.title3.weight(.semibold))
-                                    .symbolRenderingMode(.monochrome)
+                                Image(systemName: "antenna.radiowaves.left.and.right")
                                     .frame(width: 24, height: 24)
                                     .foregroundStyle(bluetooth.canSendLocation ? .green : .primary)
                             }

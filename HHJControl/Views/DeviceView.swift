@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct DeviceView: View {
     @Environment(\.dismiss) private var dismiss
@@ -29,7 +28,7 @@ struct DeviceView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     Label(
                         bluetooth.state.title,
-                        systemImage: bluetooth.canSendLocation ? "checkmark.seal.fill" : "bluetooth"
+                        systemImage: bluetooth.canSendLocation ? "checkmark.seal.fill" : "antenna.radiowaves.left.and.right"
                     )
                     .font(.headline)
                     .foregroundStyle(bluetooth.canSendLocation ? .green : .primary)
@@ -120,7 +119,6 @@ struct AdvancedView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var bluetooth: HHJBluetoothController
     @State private var showEditor = false
-    @State private var showLogs = false
 
     var body: some View {
         NavigationStack {
@@ -142,18 +140,7 @@ struct AdvancedView: View {
                     }
                 }
 
-                Section("诊断与设置") {
-                    Button { showLogs = true } label: {
-                        Label("诊断日志（\(model.diagnosticLogs.count)）", systemImage: "doc.text.magnifyingglass")
-                    }
-                    Button {
-                        UIPasteboard.general.string = model.copyableDiagnostics()
-                    } label: {
-                        Label("复制诊断日志", systemImage: "doc.on.doc")
-                    }
-                    ShareLink(item: model.copyableDiagnostics()) {
-                        Label("分享诊断日志", systemImage: "square.and.arrow.up")
-                    }
+                Section("设置") {
                     NavigationLink {
                         SettingsView()
                     } label: {
@@ -167,33 +154,6 @@ struct AdvancedView: View {
                     model.refreshSelectionDetails()
                     model.mapRequestID = UUID()
                     model.selectedTab = .location
-                }
-            }
-            .sheet(isPresented: $showLogs) { DiagnosticLogView() }
-        }
-    }
-}
-
-private struct DiagnosticLogView: View {
-    @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var model: AppModel
-
-    var body: some View {
-        NavigationStack {
-            List(model.diagnosticLogs) { entry in
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(entry.level.rawValue).font(.caption.weight(.semibold))
-                        Spacer()
-                        Text(entry.date, style: .time).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                    }
-                    Text(entry.message).font(.caption.monospaced())
-                }
-            }
-            .navigationTitle("诊断日志")
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("完成") { dismiss() }
                 }
             }
         }

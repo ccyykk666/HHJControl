@@ -151,10 +151,6 @@ final class HHJBluetoothController: ObservableObject {
         }
     }
 
-    func copyableDiagnostics() -> String {
-        logs.map { "[\($0.date.formatted(date: .numeric, time: .standard))] \($0.level.rawValue) \($0.message)" }.joined(separator: "\n")
-    }
-
     private func handle(_ event: BluetoothTransportEvent) {
         switch event {
         case .availability(let availability):
