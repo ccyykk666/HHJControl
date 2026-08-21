@@ -117,6 +117,7 @@ struct DeviceView: View {
 }
 
 struct AdvancedView: View {
+    @Environment(\.openURL) private var openURL
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var bluetooth: HHJBluetoothController
     @State private var showEditor = false
@@ -142,8 +143,10 @@ struct AdvancedView: View {
                 }
 
                 Section("设置") {
-                    NavigationLink {
-                        ShortcutView()
+                    Button {
+                        if let url = URL(string: "shortcuts://") {
+                            openURL(url)
+                        }
                     } label: {
                         Label("快捷指令", systemImage: "wand.and.stars")
                     }
@@ -167,167 +170,5 @@ struct AdvancedView: View {
                 }
             }
         }
-    }
-}
-
-private struct ShortcutView: View {
-    private enum Phase: Equatable {
-        case readyForFirst
-        case waitingForFirst
-        case countdown(Int)
-        case readyForSecond
-        case waitingForSecond
-        case completed
-        case failed
-    }
-
-    @Environment(\.openURL) private var openURL
-    @EnvironmentObject private var model: AppModel
-    @State private var state: Phase = .readyForFirst
-    @State private var stateTask: Task<Void, Never>?
-
-    var body: some View {
-        Form {
-            Section {
-                Button(action: performAction) {
-                    HStack(spacing: 12) {
-                        Label(buttonTitle, systemImage: buttonIcon)
-                        Spacer()
-                        if showsProgress {
-                            ProgressView()
-                        }
-                    }
-                }
-                .disabled(!isActionEnabled)
-            }
-        }
-        .navigationTitle("快捷指令")
-        .onChange(of: model.shortcutCallback) { _, callback in
-            handleCallback(callback)
-        }
-    }
-
-    private var buttonTitle: String {
-        switch state {
-        case .readyForFirst: "打开 HHJ1"
-        case .waitingForFirst: "正在打开 HHJ1…"
-        case .countdown(let seconds): "等待 \(seconds) 秒…"
-        case .readyForSecond: "打开 HHJ2"
-        case .waitingForSecond: "正在打开 HHJ2…"
-        case .completed: "已完成"
-        case .failed: "操作失败"
-        }
-    }
-
-    private var buttonIcon: String {
-        switch state {
-        case .readyForFirst, .waitingForFirst: "airplane"
-        case .countdown: "timer"
-        case .readyForSecond, .waitingForSecond: "location.fill"
-        case .completed: "checkmark.circle.fill"
-        case .failed: "exclamationmark.circle.fill"
-        }
-    }
-
-    private var showsProgress: Bool {
-        switch state {
-        case .waitingForFirst, .countdown, .waitingForSecond: true
-        default: false
-        }
-    }
-
-    private var isActionEnabled: Bool {
-        switch state {
-        case .readyForFirst, .readyForSecond: true
-        default: false
-        }
-    }
-
-    private func performAction() {
-        switch state {
-        case .readyForFirst:
-            state = .waitingForFirst
-            openShortcut(named: "HHJ1", stage: .hhj1)
-        case .readyForSecond:
-            state = .waitingForSecond
-            openShortcut(named: "HHJ2", stage: .hhj2)
-        default:
-            break
-        }
-    }
-
-    private func handleCallback(_ callback: AppModel.ShortcutCallback?) {
-        guard let callback else { return }
-        switch (callback.stage, callback.result) {
-        case (.hhj1, .success):
-            startCountdown()
-        case (.hhj2, .success):
-            showTemporaryState(.completed)
-        case (_, .cancelled), (_, .failed):
-            showTemporaryState(.failed)
-        }
-    }
-
-    private func startCountdown() {
-        stateTask?.cancel()
-        stateTask = Task { @MainActor in
-            do {
-                for seconds in stride(from: 10, through: 1, by: -1) {
-                    state = .countdown(seconds)
-                    try await Task.sleep(for: .seconds(1))
-                }
-                state = .readyForSecond
-            } catch {
-                state = .readyForFirst
-            }
-        }
-    }
-
-    private func showTemporaryState(_ value: Phase) {
-        stateTask?.cancel()
-        stateTask = Task { @MainActor in
-            state = value
-            try? await Task.sleep(for: .seconds(1))
-            if !Task.isCancelled { state = .readyForFirst }
-        }
-    }
-
-    private func openShortcut(named name: String, stage: AppModel.ShortcutCallback.Stage) {
-        guard let url = shortcutURL(named: name, stage: stage) else {
-            showTemporaryState(.failed)
-            return
-        }
-        openURL(url) { accepted in
-            if !accepted {
-                Task { @MainActor in
-                    showTemporaryState(.failed)
-                }
-            }
-        }
-    }
-
-    private func shortcutURL(named name: String, stage: AppModel.ShortcutCallback.Stage) -> URL? {
-        func callbackURL(result: AppModel.ShortcutCallback.Result) -> String? {
-            var callback = URLComponents()
-            callback.scheme = "hhjcontrol"
-            callback.host = "shortcut-return"
-            callback.queryItems = [
-                URLQueryItem(name: "stage", value: stage.rawValue),
-                URLQueryItem(name: "result", value: result.rawValue)
-            ]
-            return callback.url?.absoluteString
-        }
-
-        var components = URLComponents()
-        components.scheme = "shortcuts"
-        components.host = "x-callback-url"
-        components.path = "/run-shortcut"
-        components.queryItems = [
-            URLQueryItem(name: "name", value: name),
-            URLQueryItem(name: "x-success", value: callbackURL(result: .success)),
-            URLQueryItem(name: "x-cancel", value: callbackURL(result: .cancelled)),
-            URLQueryItem(name: "x-error", value: callbackURL(result: .failed))
-        ]
-        return components.url
     }
 }

@@ -1,5 +1,33 @@
+import MapKit
 import SwiftUI
 import UIKit
+
+private final class SoftEdgeHostingController<Content: View>: UIHostingController<Content> {
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        applySoftTopEdgeEffect(in: view.window ?? view)
+    }
+
+    private func applySoftTopEdgeEffect(in currentView: UIView) {
+        if let scrollView = currentView as? UIScrollView,
+           !isInsideMap(scrollView) {
+            scrollView.topEdgeEffect.style = .soft
+        }
+
+        for subview in currentView.subviews {
+            applySoftTopEdgeEffect(in: subview)
+        }
+    }
+
+    private func isInsideMap(_ view: UIView) -> Bool {
+        var ancestor = view.superview
+        while let current = ancestor {
+            if current is MKMapView { return true }
+            ancestor = current.superview
+        }
+        return false
+    }
+}
 
 final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
@@ -12,18 +40,9 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             .environmentObject(appDelegate.model.bluetooth)
             .environmentObject(appDelegate.model.store)
         let window = UIWindow(windowScene: windowScene)
-        window.rootViewController = UIHostingController(rootView: root)
+        window.rootViewController = SoftEdgeHostingController(rootView: root)
         window.makeKeyAndVisible()
         self.window = window
-
-        if let url = connectionOptions.urlContexts.first?.url {
-            appDelegate.model.handleShortcutCallback(url)
-        }
-    }
-
-    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
-        guard let url = URLContexts.first?.url else { return }
-        (UIApplication.shared.delegate as? AppDelegate)?.model.handleShortcutCallback(url)
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {

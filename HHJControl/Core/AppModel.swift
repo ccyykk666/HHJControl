@@ -7,15 +7,6 @@ import SwiftUI
 final class AppModel: ObservableObject {
     enum Tab: Hashable { case location, favorites, advanced, search }
 
-    struct ShortcutCallback: Equatable {
-        enum Stage: String { case hhj1, hhj2 }
-        enum Result: String { case success, cancelled, failed }
-
-        let id = UUID()
-        let stage: Stage
-        let result: Result
-    }
-
     @Published var selectedTab: Tab = .location
     @Published var selection: LocationSelection = {
         let wgs84 = CLLocationCoordinate2D(latitude: 23.1291, longitude: 113.2644)
@@ -28,7 +19,6 @@ final class AppModel: ObservableObject {
     @Published var administrativeArea = "正在获取区域…"
     @Published var mapRequestID = UUID()
     @Published var notice: String?
-    @Published private(set) var shortcutCallback: ShortcutCallback?
     @Published private(set) var mapCoordinateReference: MapCoordinateReference = .gcj02
     @Published private(set) var searchRegion = MKCoordinateRegion(
         center: .init(latitude: 23.1291, longitude: 113.2644),
@@ -182,17 +172,6 @@ final class AppModel: ObservableObject {
             store.addRecord(.init(selection: value, result: .failure, message: error.localizedDescription))
             return false
         }
-    }
-
-    func handleShortcutCallback(_ url: URL) {
-        guard url.scheme?.lowercased() == "hhjcontrol",
-              url.host == "shortcut-return",
-              let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let stageValue = components.queryItems?.first(where: { $0.name == "stage" })?.value,
-              let resultValue = components.queryItems?.first(where: { $0.name == "result" })?.value,
-              let stage = ShortcutCallback.Stage(rawValue: stageValue),
-              let result = ShortcutCallback.Result(rawValue: resultValue) else { return }
-        shortcutCallback = ShortcutCallback(stage: stage, result: result)
     }
 
     private func selectWGS84(

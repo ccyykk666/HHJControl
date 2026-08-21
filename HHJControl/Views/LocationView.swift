@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct LocationView: View {
     private enum SendButtonState: Equatable {
@@ -23,6 +24,10 @@ struct LocationView: View {
                     model.observeMapUserLocation(location)
                 }
                 .ignoresSafeArea()
+
+                MapTopBlurView()
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
 
                 Image(systemName: "plus")
                     .font(.title2.weight(.medium))
@@ -132,5 +137,47 @@ struct LocationView: View {
                 sendButtonState = .idle
             }
         }
+    }
+}
+
+private struct MapTopBlurView: UIViewRepresentable {
+    func makeUIView(context: Context) -> TopBlurContainerView {
+        TopBlurContainerView()
+    }
+
+    func updateUIView(_ uiView: TopBlurContainerView, context: Context) {
+        uiView.setNeedsLayout()
+    }
+}
+
+private final class TopBlurContainerView: UIView {
+    private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
+    private let fadeMask = CAGradientLayer()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isUserInteractionEnabled = false
+        backgroundColor = .clear
+        blurView.isUserInteractionEnabled = false
+        addSubview(blurView)
+
+        fadeMask.colors = [
+            UIColor.black.cgColor,
+            UIColor.black.withAlphaComponent(0.85).cgColor,
+            UIColor.clear.cgColor
+        ]
+        fadeMask.locations = [0, 0.62, 1]
+        blurView.layer.mask = fadeMask
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let statusBarHeight = window?.safeAreaInsets.top ?? safeAreaInsets.top
+        blurView.frame = CGRect(x: 0, y: 0, width: bounds.width, height: statusBarHeight + 28)
+        fadeMask.frame = blurView.bounds
     }
 }
