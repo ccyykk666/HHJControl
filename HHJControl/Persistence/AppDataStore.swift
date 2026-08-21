@@ -25,6 +25,23 @@ final class AppDataStore: ObservableObject {
         persist(favorites, to: favoritesURL)
     }
 
+    func isFavorite(_ selection: LocationSelection) -> Bool {
+        favorites.contains { sameLocation($0.selection, selection) }
+    }
+
+    /// Returns the state after the change: `true` when the location is now saved.
+    @discardableResult
+    func toggleFavorite(_ selection: LocationSelection) -> Bool {
+        if let index = favorites.firstIndex(where: { sameLocation($0.selection, selection) }) {
+            favorites.remove(at: index)
+            persist(favorites, to: favoritesURL)
+            return false
+        }
+
+        addFavorite(selection)
+        return true
+    }
+
     func updateFavorite(_ place: SavedPlace) {
         guard let index = favorites.firstIndex(where: { $0.id == place.id }) else { return }
         favorites[index] = place
@@ -54,6 +71,11 @@ final class AppDataStore: ObservableObject {
     private func persist<T: Encodable>(_ value: T, to url: URL) {
         guard let data = try? encoder.encode(value) else { return }
         try? data.write(to: url, options: .atomic)
+    }
+
+    private func sameLocation(_ lhs: LocationSelection, _ rhs: LocationSelection) -> Bool {
+        abs(lhs.mapLatitude - rhs.mapLatitude) < 0.00001
+            && abs(lhs.mapLongitude - rhs.mapLongitude) < 0.00001
     }
 }
 

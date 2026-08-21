@@ -18,6 +18,7 @@ final class AppModel: ObservableObject {
     let store: AppDataStore
     let locationProvider: DeviceLocationProvider
     private var reverseGeocodingRequest: MKReverseGeocodingRequest?
+    private var fallbackGeocoder: CLGeocoder?
     private var reverseGeocodingTask: Task<Void, Never>?
     private var reverseGeocodingID = UUID()
     private var didPrepareForLaunch = false
@@ -99,6 +100,7 @@ final class AppModel: ObservableObject {
     private func resolveAddress(for coordinate: CLLocationCoordinate2D, updateName: Bool) {
         reverseGeocodingTask?.cancel()
         reverseGeocodingRequest?.cancel()
+        fallbackGeocoder?.cancelGeocode()
         let requestID = UUID()
         reverseGeocodingID = requestID
         logGeocoding(.info, "反向地理编码排队：\(coordinateText(coordinate))")
@@ -127,6 +129,12 @@ final class AppModel: ObservableObject {
                 guard !Task.isCancelled,
                       self.isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate) else { return }
                 let error = error as NSError
+                if error.domain == MKErrorDomain, error.code == MKError.Code.placemarkNotFound.rawValue {
+                    self.logGeocoding(.warning, "MapKit 未找到地点；改用系统地址服务")
+                    await self.resolveAddressWithCoreLocation(for: coordinate, updateName: updateName, requestID: requestID)
+                    return
+                }
+
                 if updateName { self.selection.address = "已选择的位置" }
                 self.administrativeArea = "区域信息不可用"
                 self.logGeocoding(.error, "反向地理编码失败：\(error.domain) (\(error.code)) \(error.localizedDescription)")
@@ -135,19 +143,76 @@ final class AppModel: ObservableObject {
 
             guard !Task.isCancelled,
                   self.isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate) else { return }
+            guard let item else {
+                self.logGeocoding(.warning, "MapKit 未返回地点；改用系统地址服务")
+                await self.resolveAddressWithCoreLocation(for: coordinate, updateName: updateName, requestID: requestID)
+                return
+            }
+
             if updateName {
-                self.selection.address = item?.name?.nilIfEmpty
-                    ?? item?.address?.shortAddress?.nilIfEmpty
-                    ?? item?.addressRepresentations?.cityName?.nilIfEmpty
+                self.selection.address = item.name?.nilIfEmpty
+                    ?? item.address?.shortAddress?.nilIfEmpty
+                    ?? item.addressRepresentations?.cityName?.nilIfEmpty
                     ?? "已选择的位置"
             }
-            if let area = item.flatMap(self.administrativeArea(for:)) {
+            if let area = self.administrativeArea(for: item) {
                 self.administrativeArea = area
                 self.logGeocoding(.success, "区域信息：\(area)")
             } else {
                 self.administrativeArea = "区域信息不可用"
                 self.logGeocoding(.warning, "地点未提供可显示的区域信息")
             }
+        }
+    }
+
+    private func resolveAddressWithCoreLocation(
+        for coordinate: CLLocationCoordinate2D,
+        updateName: Bool,
+        requestID: UUID
+    ) async {
+        guard !Task.isCancelled,
+              isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate) else { return }
+
+        let geocoder = CLGeocoder()
+        fallbackGeocoder = geocoder
+        logGeocoding(.info, "系统地址服务开始：\(coordinateText(coordinate))")
+
+        let placemark: CLPlacemark?
+        do {
+            let placemarks = try await geocoder.reverseGeocodeLocation(
+                CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude),
+                preferredLocale: .autoupdatingCurrent
+            )
+            placemark = placemarks.first
+            logGeocoding(.info, "系统地址服务返回 \(placemarks.count) 个地点")
+        } catch {
+            guard !Task.isCancelled,
+                  isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate) else { return }
+            let error = error as NSError
+            if updateName { selection.address = "已选择的位置" }
+            administrativeArea = "区域信息不可用"
+            logGeocoding(.error, "系统地址服务失败：\(error.domain) (\(error.code)) \(error.localizedDescription)")
+            return
+        }
+
+        guard !Task.isCancelled,
+              isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate),
+              let placemark else {
+            return
+        }
+
+        if updateName {
+            selection.address = placemark.name?.nilIfEmpty
+                ?? placemark.locality?.nilIfEmpty
+                ?? placemark.administrativeArea?.nilIfEmpty
+                ?? "已选择的位置"
+        }
+        if let area = administrativeArea(for: placemark) {
+            administrativeArea = area
+            logGeocoding(.success, "系统区域信息：\(area)")
+        } else {
+            administrativeArea = "区域信息不可用"
+            logGeocoding(.warning, "系统地址服务未提供可显示的区域信息")
         }
     }
 
@@ -200,6 +265,34 @@ final class AppModel: ObservableObject {
             .joined(separator: " ")
             .nilIfEmpty
             ?? fullAddress
+    }
+
+    private func administrativeArea(for placemark: CLPlacemark) -> String? {
+        let isChina = placemark.isoCountryCode?.uppercased() == "CN"
+        let parts: [String?]
+
+        if isChina {
+            parts = [
+                placemark.administrativeArea,
+                placemark.subAdministrativeArea,
+                placemark.locality,
+                placemark.subLocality
+            ]
+        } else {
+            parts = [
+                placemark.country,
+                placemark.administrativeArea,
+                placemark.subAdministrativeArea,
+                placemark.locality,
+                placemark.subLocality
+            ]
+        }
+
+        return parts
+            .compactMap { $0?.nilIfEmpty }
+            .uniqued()
+            .joined(separator: " ")
+            .nilIfEmpty
     }
 }
 

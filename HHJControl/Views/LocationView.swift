@@ -26,7 +26,7 @@ struct LocationView: View {
                         Spacer()
                         VStack(spacing: 10) {
                             Button { showDevices = true } label: {
-                                Image(systemName: "antenna.radiowaves.left.and.right")
+                                Image(systemName: "bluetooth")
                                     .frame(width: 24, height: 24)
                                     .foregroundStyle(bluetooth.canSendLocation ? .green : .primary)
                             }
@@ -52,9 +52,13 @@ struct LocationView: View {
                                     .lineLimit(2)
                             }
                             Spacer()
-                            Button { store.addFavorite(model.selection); model.notice = "已加入收藏" } label: { Image(systemName: "star") }
+                            Button { store.toggleFavorite(model.selection) } label: {
+                                Image(systemName: store.isFavorite(model.selection) ? "star.fill" : "star")
+                                    .foregroundStyle(store.isFavorite(model.selection) ? .orange : .primary)
+                            }
                                 .buttonStyle(.glass)
                                 .accessibilityIdentifier("location.favorite")
+                                .accessibilityLabel(store.isFavorite(model.selection) ? "取消收藏" : "收藏")
                         }
                         Button(action: model.sendSelection) {
                             Label("设置定位", systemImage: "location.circle.fill").frame(maxWidth: .infinity).font(.headline)
