@@ -2,6 +2,10 @@ import CoreLocation
 import SwiftUI
 
 struct CoordinateEditorView: View {
+    private enum Field: Hashable {
+        case latitude, longitude, altitude
+    }
+
     @Environment(\.dismiss) private var dismiss
     @Binding var selection: LocationSelection
     var mapCoordinateReference: MapCoordinateReference
@@ -10,42 +14,49 @@ struct CoordinateEditorView: View {
     @State private var longitude = ""
     @State private var altitude = ""
     @State private var error: String?
+    @FocusState private var editingField: Field?
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("地图坐标") {
                     coordinateField(
-                        title: "纬度 (°)",
+                        title: "纬度",
                         text: $latitude,
                         value: latitudeValue,
                         range: -90...90,
                         step: 1,
+                        field: .latitude,
+                        format: "%.6f",
                         identifier: "coordinate.latitude"
                     )
                     coordinateField(
-                        title: "经度 (°)",
+                        title: "经度",
                         text: $longitude,
                         value: longitudeValue,
                         range: -180...180,
                         step: 1,
+                        field: .longitude,
+                        format: "%.6f",
                         identifier: "coordinate.longitude"
                     )
                     coordinateField(
-                        title: "海拔 (m)",
+                        title: "海拔",
                         text: $altitude,
                         value: altitudeValue,
                         range: -500...9000,
                         step: 1,
+                        field: .altitude,
+                        format: "%.1f",
                         identifier: "coordinate.altitude"
                     )
                     if let error { Text(error).foregroundStyle(.red) }
                 }
             }
-            .navigationTitle("坐标与海拔")
+            .navigationTitle("经纬度与海拔")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("保存", action: save) }
+                ToolbarItem(placement: .confirmationAction) { Button("应用", action: save) }
             }
             .onAppear {
                 latitude = String(format: "%.6f", selection.wgs84Latitude)
@@ -61,18 +72,46 @@ struct CoordinateEditorView: View {
         value: Binding<Double>,
         range: ClosedRange<Double>,
         step: Double,
+        field: Field,
+        format: String,
         identifier: String
     ) -> some View {
         HStack {
             Text(title)
-            TextField("", text: text)
-                .keyboardType(.numbersAndPunctuation)
-                .multilineTextAlignment(.trailing)
+            Spacer()
+            if editingField == field {
+                TextField("", text: text)
+                    .keyboardType(.numbersAndPunctuation)
+                    .multilineTextAlignment(.trailing)
+                    .focused($editingField, equals: field)
+                    .accessibilityIdentifier(identifier)
+                    .frame(minWidth: 92)
+            } else {
+                Button {
+                    editingField = field
+                } label: {
+                    Text(String(format: format, value.wrappedValue))
+                        .contentTransition(.numericText(value: value.wrappedValue))
+                        .frame(minWidth: 92, alignment: .trailing)
+                        .foregroundStyle(.primary)
+                }
+                .buttonStyle(.plain)
                 .accessibilityIdentifier(identifier)
-            Stepper("", value: value, in: range, step: step)
+            }
+            Stepper("", value: animatedValue(value), in: range, step: step)
                 .labelsHidden()
                 .accessibilityLabel("调整\(title)")
         }
+    }
+
+    private func animatedValue(_ value: Binding<Double>) -> Binding<Double> {
+        Binding(
+            get: { value.wrappedValue },
+            set: { newValue in
+                editingField = nil
+                withAnimation(.snappy) { value.wrappedValue = newValue }
+            }
+        )
     }
 
     private var latitudeValue: Binding<Double> {
