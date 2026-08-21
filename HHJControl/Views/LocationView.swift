@@ -121,7 +121,15 @@ struct LocationView: View {
                         .animation(.easeInOut(duration: 0.2), value: sendButtonState)
                     }
                     .padding(18)
-                    .glassEffect(.regular, in: .rect(cornerRadius: 28))
+                    .glassEffect(
+                        .regular,
+                        in: ConcentricRectangle(
+                            topLeadingCorner: .concentric(minimum: 28),
+                            topTrailingCorner: .concentric(minimum: 28),
+                            bottomLeadingCorner: .concentric(minimum: 28),
+                            bottomTrailingCorner: .concentric(minimum: 28)
+                        )
+                    )
                 }
                 .padding(.horizontal, 14).padding(.top, 8).padding(.bottom, 6)
             }
