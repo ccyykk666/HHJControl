@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 struct DeviceView: View {
@@ -116,6 +117,7 @@ struct DeviceView: View {
 }
 
 struct AdvancedView: View {
+    @Environment(\.openURL) private var openURL
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var bluetooth: HHJBluetoothController
     @State private var showEditor = false
@@ -141,6 +143,14 @@ struct AdvancedView: View {
                 }
 
                 Section("设置") {
+                    Button {
+                        if let url = shortcutURL {
+                            openURL(url)
+                        }
+                    } label: {
+                        Label("快捷指令", systemImage: "square.stack.3d.up")
+                    }
+
                     NavigationLink {
                         SettingsView()
                     } label: {
@@ -160,5 +170,19 @@ struct AdvancedView: View {
                 }
             }
         }
+    }
+
+    private var shortcutURL: URL? {
+        var components = URLComponents()
+        components.scheme = "shortcuts"
+        components.host = "x-callback-url"
+        components.path = "/run-shortcut"
+        components.queryItems = [
+            URLQueryItem(name: "name", value: "快捷指令"),
+            URLQueryItem(name: "x-success", value: "hhjcontrol://shortcut-finished"),
+            URLQueryItem(name: "x-cancel", value: "hhjcontrol://shortcut-cancelled"),
+            URLQueryItem(name: "x-error", value: "hhjcontrol://shortcut-failed")
+        ]
+        return components.url
     }
 }
