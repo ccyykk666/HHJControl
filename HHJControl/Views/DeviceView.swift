@@ -171,7 +171,7 @@ struct AdvancedView: View {
 }
 
 private struct ShortcutView: View {
-    private enum State: Equatable {
+    private enum Phase: Equatable {
         case readyForFirst
         case waitingForFirst
         case countdown(Int)
@@ -183,7 +183,7 @@ private struct ShortcutView: View {
 
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var model: AppModel
-    @State private var state: State = .readyForFirst
+    @State private var state: Phase = .readyForFirst
     @State private var stateTask: Task<Void, Never>?
 
     var body: some View {
@@ -283,7 +283,7 @@ private struct ShortcutView: View {
         }
     }
 
-    private func showTemporaryState(_ value: State) {
+    private func showTemporaryState(_ value: Phase) {
         stateTask?.cancel()
         stateTask = Task { @MainActor in
             state = value
