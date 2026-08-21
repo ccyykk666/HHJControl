@@ -22,10 +22,10 @@ struct SearchTabReselectionObserver: UIViewRepresentable {
     }
 
     @MainActor
-    final class Coordinator: NSObject, UITabBarControllerDelegate {
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         var onReselect: () -> Void
-        private weak var tabBarController: UITabBarController?
-        private var originalDelegate: (any UITabBarControllerDelegate)?
+        private weak var tabBar: UITabBar?
+        private var tapRecognizer: UITapGestureRecognizer?
 
         init(onReselect: @escaping () -> Void) {
             self.onReselect = onReselect
@@ -34,24 +34,37 @@ struct SearchTabReselectionObserver: UIViewRepresentable {
         func attach(from view: UIView) {
             guard let rootViewController = view.window?.rootViewController,
                   let controller = findTabBarController(in: rootViewController),
-                  controller.delegate !== self else { return }
-            originalDelegate = controller.delegate
-            tabBarController = controller
-            controller.delegate = self
-        }
-
-        func tabBarController(_ tabBarController: UITabBarController, shouldSelect viewController: UIViewController) -> Bool {
-            let allowed = originalDelegate?.tabBarController?(tabBarController, shouldSelect: viewController) ?? true
-            if allowed,
-               tabBarController.selectedViewController === viewController,
-               tabBarController.viewControllers?.firstIndex(of: viewController) == 3 {
-                onReselect()
+                  controller.tabBar !== tabBar else { return }
+            if let tapRecognizer {
+                tapRecognizer.view?.removeGestureRecognizer(tapRecognizer)
             }
-            return allowed
+            let recognizer = UITapGestureRecognizer(target: self, action: #selector(didTapSearchTab))
+            recognizer.cancelsTouchesInView = false
+            recognizer.delegate = self
+            controller.tabBar.addGestureRecognizer(recognizer)
+            tabBar = controller.tabBar
+            tapRecognizer = recognizer
         }
 
-        func tabBarController(_ tabBarController: UITabBarController, didSelect viewController: UIViewController) {
-            originalDelegate?.tabBarController?(tabBarController, didSelect: viewController)
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard let tapRecognizer = gestureRecognizer as? UITapGestureRecognizer,
+                  let tabBar,
+                  let items = tabBar.items,
+                  let searchIndex = items.firstIndex(where: { $0.title == "搜索" }),
+                  tabBar.selectedItem === items[searchIndex] else { return false }
+            return searchItemFrame(in: tabBar, at: searchIndex, itemCount: items.count).contains(tapRecognizer.location(in: tabBar))
+        }
+
+        @objc private func didTapSearchTab() {
+            onReselect()
+        }
+
+        private func searchItemFrame(in tabBar: UITabBar, at index: Int, itemCount: Int) -> CGRect {
+            let width = tabBar.itemWidth > 0 ? tabBar.itemWidth : tabBar.bounds.width / CGFloat(itemCount)
+            let spacing = tabBar.itemSpacing > 0 ? tabBar.itemSpacing : 0
+            let totalWidth = width * CGFloat(itemCount) + spacing * CGFloat(itemCount - 1)
+            let origin = (tabBar.bounds.width - totalWidth) / 2
+            return CGRect(x: origin + CGFloat(index) * (width + spacing), y: 0, width: width, height: tabBar.bounds.height)
         }
 
         private func findTabBarController(in viewController: UIViewController) -> UITabBarController? {
