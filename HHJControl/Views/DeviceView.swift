@@ -25,7 +25,7 @@ struct DeviceView: View {
 
             Divider()
 
-            VStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 14) {
                     Label(
                         bluetooth.canSendLocation ? "设备已连接" : bluetooth.state.title,
@@ -47,45 +47,47 @@ struct DeviceView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 if !bluetooth.canSendLocation {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("设备列表").font(.headline)
-                        Divider()
+                    Divider()
+                        .padding(.vertical, 20)
 
-                        if bluetooth.devices.isEmpty {
-                            HStack {
-                                ProgressView().opacity(bluetooth.state == .scanning ? 1 : 0)
-                                Text(bluetooth.state == .scanning ? "正在查找设备…" : "暂未发现设备")
-                                    .foregroundStyle(.secondary)
-                            }
-                        } else {
-                            ScrollView {
-                                LazyVStack(spacing: 0) {
-                                    ForEach(bluetooth.devices) { device in
-                                        Button {
-                                            bluetooth.connect(to: device.id)
-                                        } label: {
-                                            HStack {
-                                                Text(device.name).foregroundStyle(.primary)
-                                                Spacer()
-                                                Text("\(device.rssi) dBm")
-                                                    .font(.caption.monospacedDigit())
-                                                    .foregroundStyle(.secondary)
-                                            }
-                                            .padding(.vertical, 11)
+                    Text("设备列表").font(.headline)
+                    Divider()
+                        .padding(.vertical, 12)
+
+                    if bluetooth.devices.isEmpty {
+                        HStack {
+                            ProgressView().opacity(bluetooth.state == .scanning ? 1 : 0)
+                            Text(bluetooth.state == .scanning ? "正在查找设备…" : "暂未发现设备")
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        ScrollView {
+                            LazyVStack(spacing: 0) {
+                                ForEach(bluetooth.devices) { device in
+                                    Button {
+                                        bluetooth.connect(to: device.id)
+                                    } label: {
+                                        HStack {
+                                            Text(device.name).foregroundStyle(.primary)
+                                            Spacer()
+                                            Text("\(device.rssi) dBm")
+                                                .font(.caption.monospacedDigit())
+                                                .foregroundStyle(.secondary)
                                         }
-                                        if device.id != bluetooth.devices.last?.id { Divider() }
+                                        .padding(.vertical, 11)
                                     }
+                                    if device.id != bluetooth.devices.last?.id { Divider() }
                                 }
                             }
-                            .frame(maxHeight: 280)
                         }
-
-                        if bluetooth.state != .scanning {
-                            Divider()
-                            Button("重新扫描") { bluetooth.startScanning() }
-                        }
+                        .frame(maxHeight: 280)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if bluetooth.state != .scanning {
+                        Divider()
+                            .padding(.top, 12)
+                        Button("重新扫描") { bluetooth.startScanning() }
+                    }
                 }
             }
             .padding(20)
