@@ -2,7 +2,7 @@ import CoreLocation
 import Foundation
 
 @MainActor
-final class DeviceLocationProvider: NSObject, CLLocationManagerDelegate {
+final class DeviceLocationProvider: NSObject, @preconcurrency CLLocationManagerDelegate {
     enum LocationError: LocalizedError {
         case denied, unavailable
         var errorDescription: String? {
@@ -42,4 +42,3 @@ final class DeviceLocationProvider: NSObject, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) { finish(.failure(error)) }
     private func finish(_ result: Result<CLLocation, Error>) { completion?(result); completion = nil }
 }
-

@@ -2,7 +2,7 @@ import MapKit
 import SwiftUI
 
 @MainActor
-final class SearchService: NSObject, ObservableObject, MKLocalSearchCompleterDelegate {
+final class SearchService: NSObject, ObservableObject, @preconcurrency MKLocalSearchCompleterDelegate {
     @Published var query = "" { didSet { completer.queryFragment = query } }
     @Published private(set) var completions: [MKLocalSearchCompletion] = []
     @Published private(set) var errorMessage: String?
@@ -30,4 +30,3 @@ final class SearchService: NSObject, ObservableObject, MKLocalSearchCompleterDel
         }
     }
 }
-
