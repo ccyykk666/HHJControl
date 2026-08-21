@@ -15,9 +15,30 @@ struct CoordinateEditorView: View {
         NavigationStack {
             Form {
                 Section("地图坐标") {
-                    TextField("纬度 -90...90", text: $latitude).keyboardType(.numbersAndPunctuation).accessibilityIdentifier("coordinate.latitude")
-                    TextField("经度 -180...180", text: $longitude).keyboardType(.numbersAndPunctuation).accessibilityIdentifier("coordinate.longitude")
-                    TextField("海拔 -500...9000 米", text: $altitude).keyboardType(.numbersAndPunctuation).accessibilityIdentifier("coordinate.altitude")
+                    coordinateField(
+                        title: "纬度 (°)",
+                        text: $latitude,
+                        value: latitudeValue,
+                        range: -90...90,
+                        step: 0.0001,
+                        identifier: "coordinate.latitude"
+                    )
+                    coordinateField(
+                        title: "经度 (°)",
+                        text: $longitude,
+                        value: longitudeValue,
+                        range: -180...180,
+                        step: 0.0001,
+                        identifier: "coordinate.longitude"
+                    )
+                    coordinateField(
+                        title: "海拔 (m)",
+                        text: $altitude,
+                        value: altitudeValue,
+                        range: -500...9000,
+                        step: 1,
+                        identifier: "coordinate.altitude"
+                    )
                     if let error { Text(error).foregroundStyle(.red) }
                 }
             }
@@ -32,6 +53,47 @@ struct CoordinateEditorView: View {
                 altitude = String(format: "%.1f", selection.altitude)
             }
         }
+    }
+
+    private func coordinateField(
+        title: String,
+        text: Binding<String>,
+        value: Binding<Double>,
+        range: ClosedRange<Double>,
+        step: Double,
+        identifier: String
+    ) -> some View {
+        HStack {
+            Text(title)
+            TextField("", text: text)
+                .keyboardType(.numbersAndPunctuation)
+                .multilineTextAlignment(.trailing)
+                .accessibilityIdentifier(identifier)
+            Stepper("", value: value, in: range, step: step)
+                .labelsHidden()
+                .accessibilityLabel("调整\(title)")
+        }
+    }
+
+    private var latitudeValue: Binding<Double> {
+        Binding(
+            get: { Double(latitude) ?? selection.wgs84Latitude },
+            set: { latitude = String(format: "%.6f", $0) }
+        )
+    }
+
+    private var longitudeValue: Binding<Double> {
+        Binding(
+            get: { Double(longitude) ?? selection.wgs84Longitude },
+            set: { longitude = String(format: "%.6f", $0) }
+        )
+    }
+
+    private var altitudeValue: Binding<Double> {
+        Binding(
+            get: { Double(altitude) ?? selection.altitude },
+            set: { altitude = String(format: "%.1f", $0) }
+        )
     }
 
     private func save() {

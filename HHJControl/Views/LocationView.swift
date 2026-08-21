@@ -51,10 +51,11 @@ struct LocationView: View {
                                     .foregroundStyle(bluetooth.canSendLocation ? .green : .primary)
                             }
                             .frame(width: 50, height: 48)
+                            .contentShape(Rectangle())
                             .buttonStyle(.plain)
                             .accessibilityLabel("蓝牙，\(bluetooth.state.title)")
 
-                            Divider().padding(.horizontal, 10)
+                            Divider().frame(width: 30)
 
                             Button {
                                 model.useCurrentLocation()
@@ -62,8 +63,10 @@ struct LocationView: View {
                                 Image(systemName: "location.fill").frame(width: 24, height: 24)
                             }
                             .frame(width: 50, height: 48)
+                            .contentShape(Rectangle())
                             .buttonStyle(.plain)
                         }
+                        .frame(width: 50)
                         .glassEffect(.regular, in: .capsule)
                     }
 

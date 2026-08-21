@@ -28,7 +28,7 @@ struct DeviceView: View {
             VStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 14) {
                     Label(
-                        bluetooth.state.title,
+                        bluetooth.canSendLocation ? "设备已连接" : bluetooth.state.title,
                         systemImage: bluetooth.canSendLocation ? "checkmark.seal.fill" : "antenna.radiowaves.left.and.right"
                     )
                     .font(.headline)
@@ -93,9 +93,6 @@ struct DeviceView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .presentationDetents([.height(presentationHeight)])
         .onAppear(perform: beginScanningIfNeeded)
-        .onChange(of: bluetooth.state) { _, state in
-            if state == .ready { dismiss() }
-        }
     }
 
     private func beginScanningIfNeeded() {
@@ -133,7 +130,7 @@ struct AdvancedView: View {
                 }
 
                 Section("设备") {
-                    LabeledContent("连接状态", value: bluetooth.state.title)
+                    LabeledContent("连接状态", value: bluetooth.canSendLocation ? "已连接" : bluetooth.state.title)
                     if bluetooth.connectedIdentifier != nil {
                         Button("断开连接", role: .destructive) { bluetooth.disconnect() }
                         if !bluetooth.canSendLocation {
@@ -154,7 +151,7 @@ struct AdvancedView: View {
                     NavigationLink {
                         SettingsView()
                     } label: {
-                        Label("权限、隐私与关于", systemImage: "gearshape")
+                        Label("权限与关于", systemImage: "gearshape")
                     }
                 }
             }
