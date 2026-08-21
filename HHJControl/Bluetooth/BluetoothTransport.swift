@@ -37,3 +37,16 @@ protocol BluetoothTransport: AnyObject {
     func write(_ data: Data, characteristicUUID: String, withResponse: Bool, identifier: UUID)
 }
 
+/// Keeps hosted unit tests from creating CBCentralManager and triggering a system permission alert.
+@MainActor
+final class InactiveBluetoothTransport: BluetoothTransport {
+    var eventHandler: ((BluetoothTransportEvent) -> Void)?
+    func startScanning() {}
+    func stopScanning() {}
+    func connect(identifier: UUID) {}
+    func disconnect(identifier: UUID) {}
+    func discoverServices(_ serviceUUIDs: [String], identifier: UUID) {}
+    func discoverCharacteristics(_ characteristicUUIDs: [String], serviceUUID: String, identifier: UUID) {}
+    func setNotify(_ enabled: Bool, characteristicUUID: String, identifier: UUID) {}
+    func write(_ data: Data, characteristicUUID: String, withResponse: Bool, identifier: UUID) {}
+}
