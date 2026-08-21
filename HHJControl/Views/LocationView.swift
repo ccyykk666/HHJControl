@@ -87,6 +87,8 @@ struct LocationView: View {
                                 Image(systemName: store.isFavorite(model.selection) ? "star.fill" : "star")
                                     .foregroundStyle(store.isFavorite(model.selection) ? .orange : .primary)
                             }
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("location.favorite")
                             .accessibilityLabel(store.isFavorite(model.selection) ? "取消收藏" : "收藏")
