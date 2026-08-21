@@ -62,16 +62,16 @@ final class HHJBluetoothControllerTests: XCTestCase {
         else { XCTFail("Expected failed state") }
     }
 
-    func testAuthenticationTimeoutFailsClosed() async {
+    func testAuthenticationTimeoutFailsClosed() {
         let transport = FakeBluetoothTransport()
         let controller = HHJBluetoothController(
             transport: transport,
             defaults: UserDefaults(suiteName: UUID().uuidString)!,
-            authenticationTimeout: .zero
+            authenticationTimeout: .seconds(8),
+            authenticationTimeoutScheduler: { _, action in action() }
         )
         let id = discover(controller: controller, transport: transport)
         transport.send(.notificationState(id, characteristic: HHJProtocolConstants.authNotify, enabled: true, error: nil))
-        try? await Task.sleep(for: .milliseconds(50))
         XCTAssertFalse(controller.canSendLocation)
         if case .failed(let message) = controller.state { XCTAssertTrue(message.contains("认证超时")) }
         else { XCTFail("Expected authentication timeout") }

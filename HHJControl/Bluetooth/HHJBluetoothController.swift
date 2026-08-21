@@ -3,6 +3,7 @@ import SwiftUI
 
 @MainActor
 final class HHJBluetoothController: ObservableObject {
+    typealias AuthenticationTimeoutAction = @MainActor @Sendable () -> Void
     enum State: Equatable {
         case idle, scanning, connecting, discovering, authenticating, ready, reconnecting(attempt: Int), bluetoothUnavailable(String), failed(String)
 
@@ -32,6 +33,7 @@ final class HHJBluetoothController: ObservableObject {
     private let defaults: UserDefaults
     private let authenticationTimeout: Duration
     private let reconnectDelay: (Int) -> Duration
+    private let authenticationTimeoutScheduler: (Duration, @escaping AuthenticationTimeoutAction) -> Void
     private var activeIdentifier: UUID?
     private var servicesFound = Set<String>()
     private var characteristicsFound = Set<String>()
@@ -49,12 +51,19 @@ final class HHJBluetoothController: ObservableObject {
         transport: BluetoothTransport,
         defaults: UserDefaults = .standard,
         authenticationTimeout: Duration = .seconds(8),
-        reconnectDelay: @escaping (Int) -> Duration = { .seconds($0) }
+        reconnectDelay: @escaping (Int) -> Duration = { .seconds($0) },
+        authenticationTimeoutScheduler: ((Duration, @escaping AuthenticationTimeoutAction) -> Void)? = nil
     ) {
         self.transport = transport
         self.defaults = defaults
         self.authenticationTimeout = authenticationTimeout
         self.reconnectDelay = reconnectDelay
+        self.authenticationTimeoutScheduler = authenticationTimeoutScheduler ?? { duration, action in
+            Task { @MainActor in
+                try? await Task.sleep(for: duration)
+                action()
+            }
+        }
         transport.eventHandler = { [weak self] event in self?.handle(event) }
     }
 
@@ -224,10 +233,8 @@ final class HHJBluetoothController: ObservableObject {
 
     private func startAuthenticationTimeout() {
         let token = UUID()
-        let timeout = authenticationTimeout
         authenticationToken = token
-        Task { [weak self] in
-            try? await Task.sleep(for: timeout)
+        authenticationTimeoutScheduler(authenticationTimeout) { [weak self] in
             guard let self, self.authenticationToken == token, !self.authenticated else { return }
             self.fail("认证超时，请重新认证")
         }
