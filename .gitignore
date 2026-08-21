@@ -1,0 +1,14 @@
+.DS_Store
+.build/
+DerivedData/
+build/
+*.xcarchive
+*.ipa
+*.p12
+*.mobileprovision
+cert.*
+profile.*
+ExportOptions.plist
+*.keychain-db
+HHJControl.xcodeproj/
+

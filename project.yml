@@ -1,0 +1,46 @@
+name: HHJControl
+options:
+  bundleIdPrefix: app.sagittarius9983
+  deploymentTarget:
+    iOS: "26.0"
+settings:
+  base:
+    IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    TARGETED_DEVICE_FAMILY: "1"
+    SUPPORTS_MACCATALYST: NO
+    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+targets:
+  HHJControl:
+    type: application
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: HHJControl
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.sagittarius9983.grape3949
+        PRODUCT_NAME: HHJControl
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        CODE_SIGN_STYLE: Manual
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: HHJControl/Info.plist
+    scheme:
+      testTargets:
+        - HHJControlTests
+  HHJControlTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: HHJControlTests
+    dependencies:
+      - target: HHJControl
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.sagittarius9983.grape3949.tests
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+
