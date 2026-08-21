@@ -10,7 +10,7 @@ struct LocationView: View {
         NavigationStack {
             ZStack {
                 HHJMapView(selection: $model.selection, mapRequestID: model.mapRequestID) { coordinate, source in
-                    model.select(coordinate, source: source)
+                    model.select(coordinate, source: source, moveMap: false)
                 }
                 .ignoresSafeArea()
 

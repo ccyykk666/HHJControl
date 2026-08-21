@@ -28,7 +28,7 @@ struct HHJMapView: UIViewRepresentable {
         if context.coordinator.lastRequestID != mapRequestID {
             context.coordinator.lastRequestID = mapRequestID
             context.coordinator.programmaticMove = true
-            map.setRegion(.init(center: selection.mapCoordinate, latitudinalMeters: 2_000, longitudinalMeters: 2_000), animated: true)
+            map.setCenter(selection.mapCoordinate, animated: true)
         }
     }
 

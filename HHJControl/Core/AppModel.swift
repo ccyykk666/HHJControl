@@ -31,9 +31,15 @@ final class AppModel: ObservableObject {
         useCurrentLocation(reportFailure: false)
     }
 
-    func select(_ coordinate: CLLocationCoordinate2D, address: String? = nil, altitude: Double? = nil, source: LocationSelection.Source) {
+    func select(
+        _ coordinate: CLLocationCoordinate2D,
+        address: String? = nil,
+        altitude: Double? = nil,
+        source: LocationSelection.Source,
+        moveMap: Bool = true
+    ) {
         selection = LocationSelection(mapCoordinate: coordinate, altitude: altitude ?? selection.altitude, address: address ?? "正在获取地址…", source: source)
-        mapRequestID = UUID()
+        if moveMap { mapRequestID = UUID() }
         if address == nil { resolveAddress(for: coordinate) }
     }
 
