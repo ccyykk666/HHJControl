@@ -8,7 +8,6 @@ final class AppModel: ObservableObject {
     enum Tab: Hashable { case location, favorites, advanced, search }
 
     @Published var selectedTab: Tab = .location
-    @Published private(set) var searchFocusRequest = 0
     @Published var selection: LocationSelection = {
         let wgs84 = CLLocationCoordinate2D(latitude: 23.1291, longitude: 113.2644)
         return LocationSelection(
@@ -40,10 +39,6 @@ final class AppModel: ObservableObject {
         self.bluetooth = bluetooth ?? HHJBluetoothController()
         self.store = store ?? AppDataStore()
         self.locationProvider = DeviceLocationProvider()
-    }
-
-    func focusSearch() {
-        searchFocusRequest &+= 1
     }
 
     func prepareForLaunch() {

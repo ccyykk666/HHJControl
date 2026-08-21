@@ -5,7 +5,6 @@ struct SearchView: View {
     @EnvironmentObject private var model: AppModel
     @StateObject private var search = SearchService()
     @State private var regionMode: SearchRegionMode = .domestic
-    @FocusState private var searchIsFocused: Bool
 
     var body: some View {
         NavigationStack {
@@ -60,10 +59,8 @@ struct SearchView: View {
             }
             .navigationTitle("搜索")
             .searchable(text: $search.query, placement: .navigationBarDrawer(displayMode: .always), prompt: "地址或地点")
-            .searchFocused($searchIsFocused)
             .onSubmit(of: .search) { search.submit() }
             .onAppear { configureSearch() }
-            .onChange(of: model.searchFocusRequest) { _, _ in searchIsFocused = true }
             .onChange(of: regionMode) { _, _ in configureSearch() }
             .onReceive(model.$searchRegion) { _ in configureSearch() }
         }

@@ -5,19 +5,24 @@ struct RootView: View {
     @AppStorage("didCompleteOnboarding") private var didCompleteOnboarding = false
 
     var body: some View {
-        RootTabBarControllerHost(model: model)
-            .sheet(
-                isPresented: Binding(get: { !didCompleteOnboarding }, set: { if !$0 { didCompleteOnboarding = true } }),
-                onDismiss: { model.prepareForLaunch() }
-            ) {
-                OnboardingView { didCompleteOnboarding = true }
-                    .presentationSizing(.form.fitted(horizontal: false, vertical: true))
-            }
-            .onAppear {
-                if didCompleteOnboarding { model.prepareForLaunch() }
-            }
-            .alert("提示", isPresented: Binding(get: { model.notice != nil }, set: { if !$0 { model.notice = nil } })) {
-                Button("好", role: .cancel) { model.notice = nil }
-            } message: { Text(model.notice ?? "") }
+        TabView(selection: $model.selectedTab) {
+            Tab("定位", systemImage: "location.fill", value: AppModel.Tab.location) { LocationView() }
+            Tab("收藏", systemImage: "star.fill", value: AppModel.Tab.favorites) { FavoritesView() }
+            Tab("高级", systemImage: "slider.horizontal.3", value: AppModel.Tab.advanced) { AdvancedView() }
+            Tab("搜索", systemImage: "magnifyingglass", value: AppModel.Tab.search) { SearchView() }
+        }
+        .sheet(
+            isPresented: Binding(get: { !didCompleteOnboarding }, set: { if !$0 { didCompleteOnboarding = true } }),
+            onDismiss: { model.prepareForLaunch() }
+        ) {
+            OnboardingView { didCompleteOnboarding = true }
+                .presentationSizing(.form.fitted(horizontal: false, vertical: true))
+        }
+        .onAppear {
+            if didCompleteOnboarding { model.prepareForLaunch() }
+        }
+        .alert("提示", isPresented: Binding(get: { model.notice != nil }, set: { if !$0 { model.notice = nil } })) {
+            Button("好", role: .cancel) { model.notice = nil }
+        } message: { Text(model.notice ?? "") }
     }
 }
