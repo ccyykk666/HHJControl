@@ -16,6 +16,7 @@ struct RootView: View {
             onDismiss: { model.prepareForLaunch() }
         ) {
             OnboardingView { didCompleteOnboarding = true }
+                .presentationSizing(.form.fitted(horizontal: false, vertical: true))
         }
         .onAppear {
             if didCompleteOnboarding { model.prepareForLaunch() }
