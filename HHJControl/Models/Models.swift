@@ -7,25 +7,19 @@ struct LocationSelection: Codable, Equatable, Identifiable, Sendable {
     var id = UUID()
     var mapLatitude: Double
     var mapLongitude: Double
-    var wgs84Latitude: Double
-    var wgs84Longitude: Double
     var altitude: Double
     var address: String
     var source: Source
 
     init(mapCoordinate: CLLocationCoordinate2D, altitude: Double = 69.8, address: String = "地图选点", source: Source = .map) {
-        let converted = CoordinateConverter.gcj02ToWGS84(mapCoordinate)
         self.mapLatitude = mapCoordinate.latitude
         self.mapLongitude = mapCoordinate.longitude
-        self.wgs84Latitude = converted.latitude
-        self.wgs84Longitude = converted.longitude
         self.altitude = altitude
         self.address = address
         self.source = source
     }
 
     var mapCoordinate: CLLocationCoordinate2D { .init(latitude: mapLatitude, longitude: mapLongitude) }
-    var wgs84Coordinate: CLLocationCoordinate2D { .init(latitude: wgs84Latitude, longitude: wgs84Longitude) }
     var isValid: Bool {
         (-90...90).contains(mapLatitude) && (-180...180).contains(mapLongitude) && (-500...9000).contains(altitude)
     }
@@ -61,4 +55,3 @@ struct CommunicationLog: Identifiable, Equatable, Sendable {
     var level: Level
     var message: String
 }
-

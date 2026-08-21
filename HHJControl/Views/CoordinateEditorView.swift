@@ -18,7 +18,6 @@ struct CoordinateEditorView: View {
                     TextField("海拔 -500...9000 米", text: $altitude).keyboardType(.numbersAndPunctuation).accessibilityIdentifier("coordinate.altitude")
                     if let error { Text(error).foregroundStyle(.red) }
                 }
-                Section { Text("中国范围内的地图坐标会按原协议方向转换为 WGS‑84；境外坐标原样发送。") }
             }
             .navigationTitle("坐标与海拔")
             .toolbar {

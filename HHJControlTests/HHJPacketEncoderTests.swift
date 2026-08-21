@@ -15,20 +15,6 @@ final class HHJPacketEncoderTests: XCTestCase {
         XCTAssertEqual(HHJPacketEncoder.degreeMinutes(0.01), "000.600000")
     }
 
-    func testOutsideChinaIsUnchanged() {
-        let source = CLLocationCoordinate2D(latitude: 40.7128, longitude: -74.006)
-        XCTAssertEqual(CoordinateConverter.gcj02ToWGS84(source).latitude, source.latitude, accuracy: 0.0000001)
-        XCTAssertEqual(CoordinateConverter.gcj02ToWGS84(source).longitude, source.longitude, accuracy: 0.0000001)
-    }
-
-    func testInsideChinaConvertsFromGCJ02TowardWGS84() {
-        let gcj = CLLocationCoordinate2D(latitude: 39.908823, longitude: 116.397470)
-        let wgs = CoordinateConverter.gcj02ToWGS84(gcj)
-        XCTAssertEqual(wgs.latitude, 39.90742, accuracy: 0.00002)
-        XCTAssertEqual(wgs.longitude, 116.39123, accuracy: 0.00002)
-        XCTAssertLessThan(wgs.longitude, gcj.longitude)
-    }
-
     func testAltitudeBoundsAndSnapshot() throws {
         let oldTimeZone = NSTimeZone.default
         NSTimeZone.default = TimeZone(identifier: "Asia/Shanghai")!

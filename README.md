@@ -9,7 +9,7 @@ App 本身不能通过公开 iOS API 修改系统定位。实际效果依赖兼�
 - 按原版设备名规则筛选 HHJ 尾插，并以服务 UUID 验证兼容性
 - 严格的连接、服务发现、认证与有界前台重连状态机
 - 地图拖动中心、长按、当前位置与独立地址搜索
-- 中国范围 GCJ‑02 → WGS‑84，境外原样发送
+- MapKit、Core Location、搜索和手动输入的坐标均按原值发送
 - 海拔编辑、收藏、最近记录与遮盖认证信息的诊断日志
 - 原生 iOS 26 Tab/Search 与 Liquid Glass
 - 本机 Codable JSON 存储；无账号、统计 SDK 或第三方 Framework
