@@ -44,22 +44,27 @@ struct LocationView: View {
 
                     HStack {
                         Spacer()
-                        VStack(spacing: 10) {
+                        VStack(spacing: 0) {
                             Button { showDevices = true } label: {
                                 Image(systemName: "antenna.radiowaves.left.and.right")
                                     .frame(width: 24, height: 24)
                                     .foregroundStyle(bluetooth.canSendLocation ? .green : .primary)
                             }
-                            .buttonStyle(.glass)
+                            .frame(width: 50, height: 48)
+                            .buttonStyle(.plain)
                             .accessibilityLabel("蓝牙，\(bluetooth.state.title)")
+
+                            Divider().padding(.horizontal, 10)
 
                             Button {
                                 model.useCurrentLocation()
                             } label: {
                                 Image(systemName: "location.fill").frame(width: 24, height: 24)
                             }
-                            .buttonStyle(.glass)
+                            .frame(width: 50, height: 48)
+                            .buttonStyle(.plain)
                         }
+                        .glassEffect(.regular, in: .capsule)
                     }
 
                     VStack(alignment: .leading, spacing: 13) {
