@@ -3,15 +3,17 @@ import SwiftUI
 struct RootView: View {
     @EnvironmentObject private var model: AppModel
     @AppStorage("didCompleteOnboarding") private var didCompleteOnboarding = false
+    @StateObject private var search = SearchService()
 
     var body: some View {
         TabView(selection: $model.selectedTab) {
             Tab("定位", systemImage: "location.fill", value: AppModel.Tab.location) { LocationView() }
             Tab("收藏", systemImage: "star.fill", value: AppModel.Tab.favorites) { FavoritesView() }
             Tab("高级", systemImage: "slider.horizontal.3", value: AppModel.Tab.advanced) { AdvancedView() }
-            Tab("搜索", systemImage: "magnifyingglass", value: AppModel.Tab.search) { SearchView() }
+            Tab(value: AppModel.Tab.search, role: .search) { SearchView(search: search) }
         }
-        .background(SearchTabReselectionObserver { model.focusSearch() })
+        .searchable(text: $search.query, prompt: "地址或地点")
+        .onSubmit(of: .search) { search.submit() }
         .sheet(
             isPresented: Binding(get: { !didCompleteOnboarding }, set: { if !$0 { didCompleteOnboarding = true } }),
             onDismiss: { model.prepareForLaunch() }
