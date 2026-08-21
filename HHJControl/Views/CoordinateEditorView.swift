@@ -55,8 +55,16 @@ struct CoordinateEditorView: View {
             }
             .navigationTitle("经纬度与海拔")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("应用", action: save) }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button { dismiss() } label: { Image(systemName: "xmark") }
+                        .accessibilityIdentifier("coordinate.cancel")
+                        .accessibilityLabel("取消")
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(action: save) { Image(systemName: "checkmark") }
+                        .accessibilityIdentifier("coordinate.apply")
+                        .accessibilityLabel("应用")
+                }
             }
             .onAppear {
                 latitude = String(format: "%.6f", selection.wgs84Latitude)

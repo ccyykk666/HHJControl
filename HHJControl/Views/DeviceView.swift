@@ -58,6 +58,10 @@ struct DeviceView: View {
                             }
                             Text(bluetooth.state == .scanning ? "正在查找设备…" : "暂未发现设备")
                                 .foregroundStyle(.secondary)
+                            Spacer()
+                            if bluetooth.state != .scanning {
+                                Button("重新扫描") { bluetooth.startScanning() }
+                            }
                         }
                         .padding(.top, 16)
                     } else {
@@ -82,11 +86,6 @@ struct DeviceView: View {
                         }
                         .frame(maxHeight: 280)
                         .padding(.top, 12)
-                    }
-
-                    if bluetooth.state != .scanning {
-                        Button("重新扫描") { bluetooth.startScanning() }
-                            .padding(.top, 16)
                     }
                 }
             }
@@ -117,8 +116,7 @@ struct DeviceView: View {
         guard !bluetooth.canSendLocation else { return 220 }
 
         let visibleRows = max(1, min(bluetooth.devices.count, 6))
-        let rescanControlHeight: CGFloat = bluetooth.state == .scanning ? 0 : 36
-        return min(600, 190 + CGFloat(visibleRows) * 45 + rescanControlHeight)
+        return min(600, 190 + CGFloat(visibleRows) * 45)
     }
 }
 

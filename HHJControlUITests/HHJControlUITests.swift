@@ -35,7 +35,7 @@ final class HHJControlUITests: XCTestCase {
         XCTAssertTrue(altitude.waitForExistence(timeout: 5))
         altitude.tap()
         altitude.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 12) + "9000.1")
-        app.buttons["应用"].tap()
+        app.buttons["coordinate.apply"].tap()
         XCTAssertTrue(app.staticTexts["海拔必须在 -500 到 9000 米之间"].waitForExistence(timeout: 5))
     }
 
