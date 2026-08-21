@@ -23,31 +23,33 @@ struct DeviceView: View {
                     }
                 }
 
-                Section("设备列表") {
-                    if bluetooth.devices.isEmpty {
-                        HStack {
-                            ProgressView().opacity(bluetooth.state == .scanning ? 1 : 0)
-                            Text(bluetooth.state == .scanning ? "正在查找设备…" : "暂未发现设备")
-                                .foregroundStyle(.secondary)
-                        }
-                    } else {
-                        ForEach(bluetooth.devices) { device in
-                            Button {
-                                bluetooth.connect(to: device.id)
-                            } label: {
-                                HStack {
-                                    Text(device.name).foregroundStyle(.primary)
-                                    Spacer()
-                                    Text("\(device.rssi) dBm")
-                                        .font(.caption.monospacedDigit())
-                                        .foregroundStyle(.secondary)
+                if !bluetooth.canSendLocation {
+                    Section("设备列表") {
+                        if bluetooth.devices.isEmpty {
+                            HStack {
+                                ProgressView().opacity(bluetooth.state == .scanning ? 1 : 0)
+                                Text(bluetooth.state == .scanning ? "正在查找设备…" : "暂未发现设备")
+                                    .foregroundStyle(.secondary)
+                            }
+                        } else {
+                            ForEach(bluetooth.devices) { device in
+                                Button {
+                                    bluetooth.connect(to: device.id)
+                                } label: {
+                                    HStack {
+                                        Text(device.name).foregroundStyle(.primary)
+                                        Spacer()
+                                        Text("\(device.rssi) dBm")
+                                            .font(.caption.monospacedDigit())
+                                            .foregroundStyle(.secondary)
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    if bluetooth.state != .scanning && !bluetooth.canSendLocation {
-                        Button("重新扫描") { bluetooth.startScanning() }
+                        if bluetooth.state != .scanning {
+                            Button("重新扫描") { bluetooth.startScanning() }
+                        }
                     }
                 }
             }

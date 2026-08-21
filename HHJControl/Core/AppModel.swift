@@ -25,9 +25,10 @@ final class AppModel: ObservableObject {
     }
 
     func prepareForLaunch() {
-        guard !didPrepareForLaunch else { return }
-        didPrepareForLaunch = true
-        bluetooth.requestAuthorization()
+        if !didPrepareForLaunch {
+            didPrepareForLaunch = true
+            bluetooth.requestAuthorization()
+        }
         useCurrentLocation(reportFailure: false)
     }
 

@@ -117,6 +117,7 @@ final class HHJBluetoothController: ObservableObject {
         authenticationToken = UUID()
         if let activeIdentifier { transport.disconnect(identifier: activeIdentifier) }
         resetSession(keepingIdentifier: false)
+        devices.removeAll()
         state = .idle
         log(.info, "已手动断开；不会自动重连")
     }
