@@ -151,7 +151,7 @@ private struct MapTopBlurView: UIViewRepresentable {
 }
 
 private final class TopBlurContainerView: UIView {
-    private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
+    private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemChromeMaterial))
     private let fadeMask = CAGradientLayer()
 
     override init(frame: CGRect) {
@@ -163,10 +163,10 @@ private final class TopBlurContainerView: UIView {
 
         fadeMask.colors = [
             UIColor.black.cgColor,
-            UIColor.black.withAlphaComponent(0.85).cgColor,
+            UIColor.black.withAlphaComponent(0.8).cgColor,
             UIColor.clear.cgColor
         ]
-        fadeMask.locations = [0, 0.62, 1]
+        fadeMask.locations = [0, 0.6, 1]
         blurView.layer.mask = fadeMask
     }
 
@@ -177,7 +177,8 @@ private final class TopBlurContainerView: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
         let statusBarHeight = window?.safeAreaInsets.top ?? safeAreaInsets.top
-        blurView.frame = CGRect(x: 0, y: 0, width: bounds.width, height: statusBarHeight + 28)
+        blurView.frame = CGRect(x: 0, y: 0, width: bounds.width, height: statusBarHeight + 20)
         fadeMask.frame = blurView.bounds
+        blurView.layer.mask = fadeMask
     }
 }
