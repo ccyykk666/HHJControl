@@ -57,13 +57,9 @@ struct CoordinateEditorView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Image(systemName: "xmark") }
-                        .accessibilityIdentifier("coordinate.cancel")
-                        .accessibilityLabel("取消")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(action: save) { Image(systemName: "checkmark") }
-                        .accessibilityIdentifier("coordinate.apply")
-                        .accessibilityLabel("应用")
                 }
             }
             .onAppear {
