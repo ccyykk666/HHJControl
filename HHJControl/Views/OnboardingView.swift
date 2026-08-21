@@ -9,11 +9,12 @@ struct OnboardingView: View {
             Image(systemName: "location.viewfinder").font(.system(size: 64, weight: .medium)).foregroundStyle(.tint)
             VStack(spacing: 8) {
                 Text("欢迎使用").font(.largeTitle.bold()).multilineTextAlignment(.center)
-                Text("选择地点，经由兼容设备为 iPhone 提供模拟 GPS 数据。").foregroundStyle(.secondary).multilineTextAlignment(.center)
+                Text("选择地点并为iPhone模拟位置数据").foregroundStyle(.secondary).multilineTextAlignment(.center)
             }
             VStack(alignment: .leading, spacing: 18) {
-                OnboardingRow(icon: "cable.connector", title: "需要兼容设备", detail: "App 无法脱离硬件独立修改系统定位。")
-                OnboardingRow(icon: "antenna.radiowaves.left.and.right", title: "仅使用必要权限", detail: "只请求蓝牙和使用期间定位权限。")
+                OnboardingRow(icon: "cable.connector", title: "连接HHJ尾插", detail: "连接兼容设备以修改系统定位。")
+                OnboardingRow(icon: "map", title: "选择地点", detail: "在地图中拖动或搜索选点。")
+                OnboardingRow(icon: "antenna.radiowaves.left.and.right", title: "授权必要权限", detail: "只请求蓝牙和使用期间定位权限。")
             }
             Spacer()
             Button("开始使用", action: complete).buttonStyle(.borderedProminent).controlSize(.large).frame(maxWidth: .infinity)
