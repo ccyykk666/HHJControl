@@ -8,7 +8,7 @@ struct RootView: View {
         TabView(selection: $model.selectedTab) {
             Tab("定位", systemImage: "location.fill", value: AppModel.Tab.location) { LocationView() }
             Tab("收藏", systemImage: "star.fill", value: AppModel.Tab.favorites) { FavoritesView() }
-            Tab("设备", systemImage: "cable.connector", value: AppModel.Tab.device) { DeviceView() }
+            Tab("高级", systemImage: "slider.horizontal.3", value: AppModel.Tab.advanced) { AdvancedView() }
             Tab(value: AppModel.Tab.search, role: .search) { SearchView() }
         }
         .sheet(isPresented: Binding(get: { !didCompleteOnboarding }, set: { if !$0 { didCompleteOnboarding = true } })) {
@@ -19,4 +19,3 @@ struct RootView: View {
         } message: { Text(model.notice ?? "") }
     }
 }
-

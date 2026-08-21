@@ -18,11 +18,12 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {
-        (UIApplication.shared.delegate as? AppDelegate)?.model.bluetooth.setForeground(true)
+        guard let model = (UIApplication.shared.delegate as? AppDelegate)?.model else { return }
+        model.prepareForLaunch()
+        model.bluetooth.setForeground(true)
     }
 
     func sceneDidEnterBackground(_ scene: UIScene) {
         (UIApplication.shared.delegate as? AppDelegate)?.model.bluetooth.setForeground(false)
     }
 }
-

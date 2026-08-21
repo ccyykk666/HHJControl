@@ -2,72 +2,129 @@ import SwiftUI
 import UIKit
 
 struct DeviceView: View {
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var bluetooth: HHJBluetoothController
-    @State private var showLogs = false
 
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Label(bluetooth.state.title, systemImage: bluetooth.canSendLocation ? "checkmark.seal.fill" : "antenna.radiowaves.left.and.right")
-                            .font(.title3.weight(.semibold)).foregroundStyle(bluetooth.canSendLocation ? .green : .primary)
-                        Text(stateDetail).font(.subheadline).foregroundStyle(.secondary)
-                        HStack {
-                            if bluetooth.connectedIdentifier != nil {
-                                Button("断开", role: .destructive) { bluetooth.disconnect() }
-                                if !bluetooth.canSendLocation { Button("重新认证") { bluetooth.retryAuthentication() } }
-                            } else {
-                                Button(bluetooth.state == .scanning ? "停止扫描" : "扫描设备") {
-                                    if bluetooth.state == .scanning { bluetooth.stopScanning() } else { bluetooth.startScanning() }
-                                }
-                            }
-                        }.buttonStyle(.bordered)
-                    }.padding(.vertical, 6)
-                } header: { Text("连接") }
+                    Label(bluetooth.state.title, systemImage: bluetooth.canSendLocation ? "checkmark.seal.fill" : "antenna.radiowaves.left.and.right")
+                        .font(.headline)
+                        .foregroundStyle(bluetooth.canSendLocation ? .green : .primary)
 
-                if bluetooth.state == .scanning || !bluetooth.devices.isEmpty {
-                    Section("附近 BLE 外设") {
-                        ForEach(bluetooth.devices) { device in
-                            Button { bluetooth.connect(to: device.id) } label: {
-                                HStack {
-                                    VStack(alignment: .leading) {
-                                        Text(device.name).foregroundStyle(.primary)
-                                        Text(device.id.uuidString).font(.caption2.monospaced()).foregroundStyle(.secondary).lineLimit(1)
-                                    }
-                                    Spacer(); Text("\(device.rssi) dBm").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                                }
+                    if bluetooth.connectedIdentifier != nil {
+                        HStack {
+                            Button("断开", role: .destructive) { bluetooth.disconnect() }
+                            if !bluetooth.canSendLocation {
+                                Button("重新认证") { bluetooth.retryAuthentication() }
                             }
                         }
                     }
                 }
 
-                Section("协议阶段") {
-                    LabeledContent("当前阶段", value: bluetooth.state.title)
-                    LabeledContent("认证服务", value: "FAA1")
-                    LabeledContent("数据服务", value: "FBB2")
-                    LabeledContent("定位特征", value: "32E1")
-                }
+                Section("HHJ 尾插") {
+                    if bluetooth.devices.isEmpty {
+                        HStack {
+                            ProgressView().opacity(bluetooth.state == .scanning ? 1 : 0)
+                            Text(bluetooth.state == .scanning ? "正在查找尾插…" : "暂未发现尾插")
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        ForEach(bluetooth.devices) { device in
+                            Button {
+                                bluetooth.connect(to: device.id)
+                            } label: {
+                                HStack {
+                                    Text(device.name).foregroundStyle(.primary)
+                                    Spacer()
+                                    Text("\(device.rssi) dBm")
+                                        .font(.caption.monospacedDigit())
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
 
-                Section("诊断") {
-                    Button { showLogs = true } label: { Label("通信日志（\(bluetooth.logs.count)）", systemImage: "doc.text.magnifyingglass") }
-                    Button {
-                        UIPasteboard.general.string = bluetooth.copyableDiagnostics()
-                    } label: { Label("复制诊断日志", systemImage: "doc.on.doc") }
+                    if bluetooth.state != .scanning && !bluetooth.canSendLocation {
+                        Button("重新扫描") { bluetooth.startScanning() }
+                    }
                 }
-
-                Section { NavigationLink { SettingsView() } label: { Label("权限、隐私与关于", systemImage: "gearshape") } }
             }
-            .navigationTitle("设备")
-            .sheet(isPresented: $showLogs) { DiagnosticLogView() }
+            .navigationTitle("选择 HHJ 尾插")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完成") { dismiss() }
+                }
+            }
+            .onAppear(perform: beginScanningIfNeeded)
+            .onChange(of: bluetooth.state) { _, state in
+                if state == .ready { dismiss() }
+            }
         }
     }
 
-    private var stateDetail: String {
+    private func beginScanningIfNeeded() {
         switch bluetooth.state {
-        case .ready: "设备服务、定位特征和认证均已通过，可以发送位置。"
-        case .failed(let message), .bluetoothUnavailable(let message): message
-        default: "仅兼容具有已验证 HHJ 服务 UUID 的尾插；扫描不按名称过滤。"
+        case .scanning, .connecting, .discovering, .authenticating, .ready, .reconnecting:
+            break
+        case .idle, .bluetoothUnavailable, .failed:
+            bluetooth.startScanning()
+        }
+    }
+}
+
+struct AdvancedView: View {
+    @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var bluetooth: HHJBluetoothController
+    @State private var showEditor = false
+    @State private var showLogs = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("手动定位") {
+                    LabeledContent("纬度", value: String(format: "%.6f", model.selection.mapLatitude))
+                    LabeledContent("经度", value: String(format: "%.6f", model.selection.mapLongitude))
+                    LabeledContent("海拔", value: String(format: "%.1f m", model.selection.altitude))
+                    Button("设置经纬度与海拔") { showEditor = true }
+                }
+
+                Section("HHJ 尾插") {
+                    LabeledContent("连接状态", value: bluetooth.state.title)
+                    if bluetooth.connectedIdentifier != nil {
+                        Button("断开连接", role: .destructive) { bluetooth.disconnect() }
+                        if !bluetooth.canSendLocation {
+                            Button("重新认证") { bluetooth.retryAuthentication() }
+                        }
+                    }
+                }
+
+                Section("诊断与设置") {
+                    Button { showLogs = true } label: {
+                        Label("通信日志（\(bluetooth.logs.count)）", systemImage: "doc.text.magnifyingglass")
+                    }
+                    Button {
+                        UIPasteboard.general.string = bluetooth.copyableDiagnostics()
+                    } label: {
+                        Label("复制诊断日志", systemImage: "doc.on.doc")
+                    }
+                    NavigationLink {
+                        SettingsView()
+                    } label: {
+                        Label("权限、隐私与关于", systemImage: "gearshape")
+                    }
+                }
+            }
+            .navigationTitle("高级")
+            .sheet(isPresented: $showEditor) {
+                CoordinateEditorView(selection: $model.selection) {
+                    model.mapRequestID = UUID()
+                    model.selectedTab = .location
+                }
+            }
+            .sheet(isPresented: $showLogs) { DiagnosticLogView() }
         }
     }
 }
@@ -75,17 +132,25 @@ struct DeviceView: View {
 private struct DiagnosticLogView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var bluetooth: HHJBluetoothController
+
     var body: some View {
         NavigationStack {
             List(bluetooth.logs) { entry in
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack { Text(entry.level.rawValue).font(.caption.weight(.semibold)); Spacer(); Text(entry.date, style: .time).font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
+                    HStack {
+                        Text(entry.level.rawValue).font(.caption.weight(.semibold))
+                        Spacer()
+                        Text(entry.date, style: .time).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    }
                     Text(entry.message).font(.caption.monospaced())
                 }
             }
             .navigationTitle("通信日志")
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } } }
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完成") { dismiss() }
+                }
+            }
         }
     }
 }
-

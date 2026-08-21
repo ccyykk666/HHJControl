@@ -36,7 +36,7 @@ struct CoordinateEditorView: View {
     private func save() {
         guard let lat = Double(latitude), (-90...90).contains(lat), let lon = Double(longitude), (-180...180).contains(lon) else { error = "请输入有效经纬度"; return }
         guard let alt = Double(altitude), (-500...9000).contains(alt) else { error = "海拔必须在 -500 到 9000 米之间"; return }
-        selection = LocationSelection(mapCoordinate: .init(latitude: lat, longitude: lon), altitude: alt, address: selection.address, source: .manual)
+        selection = LocationSelection(mapCoordinate: .init(latitude: lat, longitude: lon), altitude: alt, address: "手动坐标", source: .manual)
         onSave(); dismiss()
     }
 }

@@ -27,6 +27,7 @@ enum BluetoothTransportEvent: Sendable {
 @MainActor
 protocol BluetoothTransport: AnyObject {
     var eventHandler: ((BluetoothTransportEvent) -> Void)? { get set }
+    func prepare()
     func startScanning()
     func stopScanning()
     func connect(identifier: UUID)
@@ -41,6 +42,7 @@ protocol BluetoothTransport: AnyObject {
 @MainActor
 final class InactiveBluetoothTransport: BluetoothTransport {
     var eventHandler: ((BluetoothTransportEvent) -> Void)?
+    func prepare() {}
     func startScanning() {}
     func stopScanning() {}
     func connect(identifier: UUID) {}

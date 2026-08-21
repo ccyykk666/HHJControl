@@ -13,6 +13,8 @@ final class CoreBluetoothTransport: NSObject, BluetoothTransport {
 
     override init() { super.init() }
 
+    func prepare() { _ = central }
+
     func startScanning() {
         scanningRequested = true
         guard central.state == .poweredOn else { return }
@@ -95,9 +97,10 @@ extension CoreBluetoothTransport: @preconcurrency CBCentralManagerDelegate {
     }
 
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
+        guard let name = peripheral.name,
+              name == "AAAAA" || name.contains("br29") else { return }
         peripherals[peripheral.identifier] = peripheral
-        let advertisedName = advertisementData[CBAdvertisementDataLocalNameKey] as? String
-        eventHandler?(.discovered(.init(id: peripheral.identifier, name: advertisedName ?? peripheral.name ?? "未命名设备", rssi: RSSI.intValue, isConnected: peripheral.state == .connected)))
+        eventHandler?(.discovered(.init(id: peripheral.identifier, name: name, rssi: RSSI.intValue, isConnected: peripheral.state == .connected)))
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {

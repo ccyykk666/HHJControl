@@ -5,7 +5,7 @@ import SwiftUI
 
 @MainActor
 final class AppModel: ObservableObject {
-    enum Tab: Hashable { case location, favorites, device, search }
+    enum Tab: Hashable { case location, favorites, advanced, search }
 
     @Published var selectedTab: Tab = .location
     @Published var selection = LocationSelection(mapCoordinate: .init(latitude: 23.1291, longitude: 113.2644), address: "拖动地图或搜索地点")
@@ -16,11 +16,19 @@ final class AppModel: ObservableObject {
     let store: AppDataStore
     let locationProvider: DeviceLocationProvider
     private var reverseGeocodingRequest: MKReverseGeocodingRequest?
+    private var didPrepareForLaunch = false
 
     init(bluetooth: HHJBluetoothController? = nil, store: AppDataStore? = nil) {
         self.bluetooth = bluetooth ?? HHJBluetoothController()
         self.store = store ?? AppDataStore()
         self.locationProvider = DeviceLocationProvider()
+    }
+
+    func prepareForLaunch() {
+        guard !didPrepareForLaunch else { return }
+        didPrepareForLaunch = true
+        bluetooth.requestAuthorization()
+        useCurrentLocation(reportFailure: false)
     }
 
     func select(_ coordinate: CLLocationCoordinate2D, address: String? = nil, altitude: Double? = nil, source: LocationSelection.Source) {
@@ -35,13 +43,14 @@ final class AppModel: ObservableObject {
         mapRequestID = UUID()
     }
 
-    func useCurrentLocation() {
+    func useCurrentLocation(reportFailure: Bool = true) {
         locationProvider.requestLocation { [weak self] result in
             guard let self else { return }
             switch result {
             case .success(let location):
                 self.select(location.coordinate, altitude: location.altitude.isFinite ? location.altitude : self.selection.altitude, source: .currentLocation)
-            case .failure(let error): self.notice = error.localizedDescription
+            case .failure(let error):
+                if reportFailure { self.notice = error.localizedDescription }
             }
         }
     }

@@ -4,7 +4,7 @@ struct LocationView: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var bluetooth: HHJBluetoothController
     @EnvironmentObject private var store: AppDataStore
-    @State private var showEditor = false
+    @State private var showDevices = false
 
     var body: some View {
         NavigationStack {
@@ -20,19 +20,26 @@ struct LocationView: View {
                     .allowsHitTesting(false)
 
                 VStack(spacing: 12) {
-                    Button { model.selectedTab = .device } label: {
-                        Label(bluetooth.state.title, systemImage: bluetooth.canSendLocation ? "checkmark.circle.fill" : "antenna.radiowaves.left.and.right")
-                            .font(.subheadline.weight(.semibold))
-                            .padding(.horizontal, 14).padding(.vertical, 9)
-                    }
-                    .buttonStyle(.glass)
-
                     Spacer()
 
                     HStack {
                         Spacer()
-                        Button(action: model.useCurrentLocation) { Image(systemName: "location.fill").frame(width: 24, height: 24) }
+                        VStack(spacing: 10) {
+                            Button { showDevices = true } label: {
+                                Image(systemName: "antenna.radiowaves.left.and.right")
+                                    .frame(width: 24, height: 24)
+                                    .foregroundStyle(bluetooth.canSendLocation ? .green : .primary)
+                            }
                             .buttonStyle(.glass)
+                            .accessibilityLabel("蓝牙，\(bluetooth.state.title)")
+
+                            Button {
+                                model.useCurrentLocation()
+                            } label: {
+                                Image(systemName: "location.fill").frame(width: 24, height: 24)
+                            }
+                            .buttonStyle(.glass)
+                        }
                     }
 
                     VStack(alignment: .leading, spacing: 13) {
@@ -51,22 +58,12 @@ struct LocationView: View {
                                 .buttonStyle(.glass)
                                 .accessibilityIdentifier("location.favorite")
                         }
-                        HStack {
-                            Label(String(format: "%.1f m", model.selection.altitude), systemImage: "mountain.2")
-                            Spacer()
-                            Button("编辑坐标与海拔") { showEditor = true }.font(.subheadline)
-                                .accessibilityIdentifier("location.editor")
-                        }
                         Button(action: model.sendSelection) {
                             Label("设置定位", systemImage: "location.circle.fill").frame(maxWidth: .infinity).font(.headline)
                         }
                         .buttonStyle(.borderedProminent).controlSize(.large)
                         .accessibilityIdentifier("location.send")
                         .disabled(!bluetooth.canSendLocation || !model.selection.isValid)
-                        if !bluetooth.canSendLocation {
-                            Button("前往设备页连接或重新认证") { model.selectedTab = .device }
-                                .font(.footnote).frame(maxWidth: .infinity)
-                        }
                     }
                     .padding(18)
                     .glassEffect(.regular, in: .rect(cornerRadius: 28))
@@ -74,7 +71,7 @@ struct LocationView: View {
                 .padding(.horizontal, 14).padding(.top, 8).padding(.bottom, 6)
             }
             .toolbar(.hidden, for: .navigationBar)
-            .sheet(isPresented: $showEditor) { CoordinateEditorView(selection: $model.selection) { model.mapRequestID = UUID() } }
+            .sheet(isPresented: $showDevices) { DeviceView() }
         }
     }
 }

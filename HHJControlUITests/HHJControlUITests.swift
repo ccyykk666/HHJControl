@@ -27,7 +27,8 @@ final class HHJControlUITests: XCTestCase {
     }
 
     func testAltitudeOutsideRangeShowsValidationError() {
-        let editor = app.buttons["location.editor"]
+        app.tabBars.buttons["高级"].tap()
+        let editor = app.buttons["设置经纬度与海拔"]
         XCTAssertTrue(editor.waitForExistence(timeout: 10))
         editor.tap()
         let altitude = app.textFields["coordinate.altitude"]

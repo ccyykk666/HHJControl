@@ -137,6 +137,7 @@ private final class FakeBluetoothTransport: BluetoothTransport {
     var connectCalls: [UUID] = []
     var writes: [(data: Data, characteristic: String, withResponse: Bool)] = []
     func send(_ event: BluetoothTransportEvent) { eventHandler?(event) }
+    func prepare() {}
     func startScanning() {}
     func stopScanning() {}
     func connect(identifier: UUID) { connectCalls.append(identifier) }

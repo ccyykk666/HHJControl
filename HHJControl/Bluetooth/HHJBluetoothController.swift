@@ -78,6 +78,10 @@ final class HHJBluetoothController: ObservableObject {
 
     convenience init() { self.init(transport: CoreBluetoothTransport()) }
 
+    func requestAuthorization() {
+        transport.prepare()
+    }
+
     func startScanning() {
         guard availability == .poweredOn || availability == .unknown else {
             state = .bluetoothUnavailable(availabilityMessage)
@@ -86,8 +90,9 @@ final class HHJBluetoothController: ObservableObject {
         resetSession(keepingIdentifier: false)
         reconnectAttempt = 0
         manualDisconnect = false
+        devices.removeAll()
         state = .scanning
-        log(.info, "开始扫描所有 BLE 外设")
+        log(.info, "开始扫描 HHJ 尾插")
         transport.startScanning()
     }
 

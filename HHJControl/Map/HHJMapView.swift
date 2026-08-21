@@ -13,6 +13,7 @@ struct HHJMapView: UIViewRepresentable {
         map.delegate = context.coordinator
         map.showsCompass = true
         map.showsScale = true
+        map.showsUserLocation = true
         map.pointOfInterestFilter = .includingAll
         let press = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.longPressed(_:)))
         press.minimumPressDuration = 0.45
@@ -51,4 +52,3 @@ struct HHJMapView: UIViewRepresentable {
         }
     }
 }
-
