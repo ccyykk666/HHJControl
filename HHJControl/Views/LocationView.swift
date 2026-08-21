@@ -12,6 +12,7 @@ struct LocationView: View {
     @State private var showDevices = false
     @State private var sendButtonState: SendButtonState = .idle
     @State private var sendFeedbackTask: Task<Void, Never>?
+    @State private var favoriteAnimationTrigger = 0
 
     var body: some View {
         NavigationStack {
@@ -83,9 +84,11 @@ struct LocationView: View {
                             Button {
                                 store.toggleFavorite(model.selection)
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                favoriteAnimationTrigger += 1
                             } label: {
                                 Image(systemName: store.isFavorite(model.selection) ? "star.fill" : "star")
                                     .font(.title3)
+                                    .symbolEffect(.bounce, value: favoriteAnimationTrigger)
                                     .foregroundStyle(store.isFavorite(model.selection) ? .orange : .primary)
                             }
                             .frame(width: 44, height: 44)
