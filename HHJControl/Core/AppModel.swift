@@ -91,26 +91,51 @@ final class AppModel: ObservableObject {
         }
         reverseGeocodingRequest = request
         Task { [weak self] in
-            let items = try? await request.mapItems
-            let item = items?.first
+            let item = try? await request.mapItems.first
             guard let self,
                   self.selection.mapCoordinate.latitude == coordinate.latitude,
                   self.selection.mapCoordinate.longitude == coordinate.longitude else { return }
-            if updateName { self.selection.address = item?.name?.nilIfEmpty ?? "已选择的位置" }
-            let placemark = item?.placemark
-            let country = placemark?.isoCountryCode?.uppercased() == "CN" ? nil : placemark?.country
-            self.administrativeArea = [
-                country,
-                placemark?.administrativeArea,
-                placemark?.subAdministrativeArea,
-                placemark?.locality,
-                placemark?.subLocality
+            if updateName {
+                self.selection.address = item?.name?.nilIfEmpty
+                    ?? item?.addressRepresentations?.cityName?.nilIfEmpty
+                    ?? "已选择的位置"
+            }
+            self.administrativeArea = item.flatMap(self.administrativeArea(for:)) ?? "区域信息不可用"
+        }
+    }
+
+    private func administrativeArea(for item: MKMapItem) -> String? {
+        let placemark = item.placemark
+        let representations = item.addressRepresentations
+        let regionCode = representations?.region?.identifier ?? placemark.isoCountryCode
+        let isChina = regionCode?.uppercased() == "CN"
+
+        if isChina {
+            return [
+                placemark.administrativeArea,
+                placemark.subAdministrativeArea,
+                placemark.locality,
+                placemark.subLocality,
+                representations?.cityName
             ]
             .compactMap { $0?.nilIfEmpty }
             .uniqued()
             .joined(separator: " ")
-            .nilIfEmpty ?? "区域信息不可用"
+            .nilIfEmpty
         }
+
+        return representations?.cityWithContext?.nilIfEmpty
+            ?? [
+                representations?.regionName ?? placemark.country,
+                placemark.administrativeArea,
+                placemark.subAdministrativeArea,
+                representations?.cityName ?? placemark.locality,
+                placemark.subLocality
+            ]
+            .compactMap { $0?.nilIfEmpty }
+            .uniqued()
+            .joined(separator: " ")
+            .nilIfEmpty
     }
 }
 
