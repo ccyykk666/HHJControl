@@ -48,10 +48,6 @@ struct LocationView: View {
                                 Text(model.selection.address).font(.headline).lineLimit(2)
                                 Text(String(format: "地图 %.6f, %.6f", model.selection.mapLatitude, model.selection.mapLongitude))
                                     .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                                if CoordinateConverter.isInChina(model.selection.mapCoordinate) {
-                                    Text(String(format: "发送 WGS‑84 %.6f, %.6f", model.selection.wgs84Latitude, model.selection.wgs84Longitude))
-                                        .font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
-                                }
                             }
                             Spacer()
                             Button { store.addFavorite(model.selection); model.notice = "已加入收藏" } label: { Image(systemName: "star") }

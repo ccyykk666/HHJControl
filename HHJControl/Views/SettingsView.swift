@@ -13,10 +13,6 @@ struct SettingsView: View {
                 LabeledContent("使用期间定位", value: locationStatus)
                 Button("打开系统设置") { if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) } }
             }
-            Section("隐私") {
-                Label("不跟踪、不上传、不使用统计 SDK", systemImage: "hand.raised.fill")
-                Text("收藏、最近记录和偏好仅保存在本机。App 不读取或保存证书、GitHub Token 和签名材料。")
-            }
             Section("关于") {
                 LabeledContent("应用", value: "设备控制")
                 LabeledContent("版本", value: version)
