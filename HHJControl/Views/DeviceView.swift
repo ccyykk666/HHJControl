@@ -145,6 +145,7 @@ struct AdvancedView: View {
             .navigationTitle("高级")
             .sheet(isPresented: $showEditor) {
                 CoordinateEditorView(selection: $model.selection) {
+                    model.refreshSelectionDetails()
                     model.mapRequestID = UUID()
                     model.selectedTab = .location
                 }

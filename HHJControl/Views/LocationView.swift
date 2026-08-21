@@ -46,8 +46,10 @@ struct LocationView: View {
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(model.selection.address).font(.headline).lineLimit(2)
-                                Text(String(format: "经纬度 %.6f, %.6f", model.selection.mapLatitude, model.selection.mapLongitude))
-                                    .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                                Text(model.administrativeArea)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
                             }
                             Spacer()
                             Button { store.addFavorite(model.selection); model.notice = "已加入收藏" } label: { Image(systemName: "star") }

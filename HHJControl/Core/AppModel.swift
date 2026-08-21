@@ -9,6 +9,7 @@ final class AppModel: ObservableObject {
 
     @Published var selectedTab: Tab = .location
     @Published var selection = LocationSelection(mapCoordinate: .init(latitude: 23.1291, longitude: 113.2644), address: "拖动地图或搜索地点")
+    @Published var administrativeArea = "正在获取区域…"
     @Published var mapRequestID = UUID()
     @Published var notice: String?
 
@@ -39,14 +40,22 @@ final class AppModel: ObservableObject {
         moveMap: Bool = true
     ) {
         selection = LocationSelection(mapCoordinate: coordinate, altitude: altitude ?? selection.altitude, address: address ?? "正在获取地址…", source: source)
+        administrativeArea = "正在获取区域…"
         if moveMap { mapRequestID = UUID() }
-        if address == nil { resolveAddress(for: coordinate) }
+        resolveAddress(for: coordinate, updateName: address == nil)
     }
 
     func load(_ value: LocationSelection) {
         selection = value
+        administrativeArea = "正在获取区域…"
         selectedTab = .location
         mapRequestID = UUID()
+        resolveAddress(for: value.mapCoordinate, updateName: false)
+    }
+
+    func refreshSelectionDetails() {
+        administrativeArea = "正在获取区域…"
+        resolveAddress(for: selection.mapCoordinate, updateName: false)
     }
 
     func useCurrentLocation(reportFailure: Bool = true) {
@@ -73,10 +82,11 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func resolveAddress(for coordinate: CLLocationCoordinate2D) {
+    private func resolveAddress(for coordinate: CLLocationCoordinate2D, updateName: Bool) {
         reverseGeocodingRequest?.cancel()
         guard let request = MKReverseGeocodingRequest(location: .init(latitude: coordinate.latitude, longitude: coordinate.longitude)) else {
-            selection.address = "已选择的位置"
+            if updateName { selection.address = "已选择的位置" }
+            administrativeArea = "区域信息不可用"
             return
         }
         reverseGeocodingRequest = request
@@ -86,7 +96,18 @@ final class AppModel: ObservableObject {
             guard let self,
                   self.selection.mapCoordinate.latitude == coordinate.latitude,
                   self.selection.mapCoordinate.longitude == coordinate.longitude else { return }
-            self.selection.address = item?.name?.nilIfEmpty ?? "已选择的位置"
+            if updateName { self.selection.address = item?.name?.nilIfEmpty ?? "已选择的位置" }
+            self.administrativeArea = [
+                item?.placemark.country,
+                item?.placemark.administrativeArea,
+                item?.placemark.subAdministrativeArea,
+                item?.placemark.locality,
+                item?.placemark.subLocality
+            ]
+            .compactMap { $0?.nilIfEmpty }
+            .uniqued()
+            .joined()
+            .nilIfEmpty ?? "区域信息不可用"
         }
     }
 }
