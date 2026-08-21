@@ -15,6 +15,15 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window.rootViewController = UIHostingController(rootView: root)
         window.makeKeyAndVisible()
         self.window = window
+
+        if let url = connectionOptions.urlContexts.first?.url {
+            appDelegate.model.handleShortcutCallback(url)
+        }
+    }
+
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        guard let url = URLContexts.first?.url else { return }
+        (UIApplication.shared.delegate as? AppDelegate)?.model.handleShortcutCallback(url)
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {
