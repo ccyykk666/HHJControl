@@ -55,7 +55,7 @@ struct DeviceView: View {
                             if bluetooth.state == .scanning {
                                 ProgressView()
                             }
-                            Text(bluetooth.state == .scanning ? "正在查找设备…" : "暂未发现设备")
+                            Text(emptyDeviceMessage)
                                 .foregroundStyle(.secondary)
                             Spacer()
                             if bluetooth.state != .scanning {
@@ -106,8 +106,10 @@ struct DeviceView: View {
         switch bluetooth.state {
         case .scanning, .connecting, .discovering, .authenticating, .ready, .reconnecting:
             break
-        case .idle, .bluetoothUnavailable, .failed:
+        case .idle, .bluetoothUnavailable:
             bluetooth.startScanning()
+        case .failed:
+            break
         }
     }
 
@@ -116,6 +118,12 @@ struct DeviceView: View {
 
         let visibleRows = max(1, min(bluetooth.devices.count, 6))
         return min(600, 190 + CGFloat(visibleRows) * 45)
+    }
+
+    private var emptyDeviceMessage: String {
+        if bluetooth.state == .scanning { return "正在查找设备…" }
+        if case .failed = bluetooth.state { return "连接失败" }
+        return "暂未发现设备"
     }
 }
 

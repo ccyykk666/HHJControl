@@ -16,7 +16,7 @@ final class HHJBluetoothController: ObservableObject {
             case .discovering: "正在识别设备"
             case .authenticating: "正在认证"
             case .ready: "设备已就绪"
-            case .reconnecting(let attempt): "正在重连（\(attempt)/5）"
+            case .reconnecting: "正在重连"
             case .bluetoothUnavailable: "蓝牙不可用"
             case .failed: "连接失败"
             }
@@ -40,6 +40,7 @@ final class HHJBluetoothController: ObservableObject {
     private let defaults: UserDefaults
     private let authenticationTimeout: Duration
     private let reconnectDelay: (Int) -> Duration
+    private let reconnectTimeout: Duration
     private let authenticationTimeoutScheduler: (Duration, @escaping AuthenticationTimeoutAction) -> Void
     private let reconnectScheduler: (Duration, @escaping ReconnectAction) -> Void
     private var activeIdentifier: UUID?
@@ -49,6 +50,8 @@ final class HHJBluetoothController: ObservableObject {
     private var authenticated = false
     private var manualDisconnect = false
     private var reconnectAttempt = 0
+    private var reconnectTimeoutToken = UUID()
+    private var reconnectTimeoutIdentifier: UUID?
     private var authenticationToken = UUID()
     private var availability: BluetoothAvailability = .unknown
     private var authWriteReady = false
@@ -60,6 +63,7 @@ final class HHJBluetoothController: ObservableObject {
         defaults: UserDefaults = .standard,
         authenticationTimeout: Duration = .seconds(8),
         reconnectDelay: @escaping (Int) -> Duration = { .seconds($0) },
+        reconnectTimeout: Duration = .seconds(60),
         authenticationTimeoutScheduler: ((Duration, @escaping AuthenticationTimeoutAction) -> Void)? = nil,
         reconnectScheduler: ((Duration, @escaping ReconnectAction) -> Void)? = nil
     ) {
@@ -67,6 +71,7 @@ final class HHJBluetoothController: ObservableObject {
         self.defaults = defaults
         self.authenticationTimeout = authenticationTimeout
         self.reconnectDelay = reconnectDelay
+        self.reconnectTimeout = reconnectTimeout
         self.authenticationTimeoutScheduler = authenticationTimeoutScheduler ?? { duration, action in
             Task { @MainActor in
                 try? await Task.sleep(for: duration)
@@ -94,6 +99,7 @@ final class HHJBluetoothController: ObservableObject {
             return
         }
         resetSession(keepingIdentifier: false)
+        clearReconnectTimeout()
         reconnectAttempt = 0
         manualDisconnect = false
         devices.removeAll()
@@ -110,9 +116,11 @@ final class HHJBluetoothController: ObservableObject {
     func connect(to identifier: UUID) {
         transport.stopScanning()
         resetSession(keepingIdentifier: false)
+        clearReconnectTimeout()
         reconnectAttempt = 0
         activeIdentifier = identifier
         manualDisconnect = false
+        startReconnectTimeout(identifier)
         state = .connecting
         log(.info, "连接设备 \(identifier.uuidString)")
         transport.connect(identifier: identifier)
@@ -122,6 +130,7 @@ final class HHJBluetoothController: ObservableObject {
         manualDisconnect = true
         stopLocationStreaming()
         authenticationToken = UUID()
+        clearReconnectTimeout()
         if let activeIdentifier { transport.disconnect(identifier: activeIdentifier) }
         resetSession(keepingIdentifier: false)
         devices.removeAll()
@@ -183,6 +192,7 @@ final class HHJBluetoothController: ObservableObject {
     func setForeground(_ value: Bool) {
         if value, activeIdentifier == nil, let raw = defaults.string(forKey: "lastPeripheralIdentifier"), let identifier = UUID(uuidString: raw), !manualDisconnect {
             reconnectAttempt = 0
+            startReconnectTimeout(identifier)
             scheduleReconnect(identifier)
         }
     }
@@ -196,6 +206,7 @@ final class HHJBluetoothController: ObservableObject {
             devices.sort { $0.rssi > $1.rssi }
         case .connected(let identifier):
             guard identifier == activeIdentifier else { return }
+            clearReconnectTimeout()
             reconnectAttempt = 0
             defaults.set(identifier.uuidString, forKey: "lastPeripheralIdentifier")
             state = .discovering
@@ -309,11 +320,30 @@ final class HHJBluetoothController: ObservableObject {
 
     private func reconnectOrFail(_ identifier: UUID) {
         resetSession(keepingIdentifier: true)
-        guard !manualDisconnect, reconnectAttempt < 5 else {
-            fail(reconnectAttempt >= 5 ? "自动重连已达到 5 次" : "连接已断开")
-            return
-        }
+        guard !manualDisconnect else { fail("连接已断开"); return }
+        startReconnectTimeout(identifier)
         scheduleReconnect(identifier)
+    }
+
+    private func startReconnectTimeout(_ identifier: UUID) {
+        guard reconnectTimeoutIdentifier != identifier else { return }
+        let token = UUID()
+        reconnectTimeoutToken = token
+        reconnectTimeoutIdentifier = identifier
+        authenticationTimeoutScheduler(reconnectTimeout) { [weak self] in
+            guard let self,
+                  self.reconnectTimeoutToken == token,
+                  self.reconnectTimeoutIdentifier == identifier,
+                  self.activeIdentifier == identifier else { return }
+            self.resetSession(keepingIdentifier: false)
+            self.clearReconnectTimeout()
+            self.state = .failed("连接失败")
+        }
+    }
+
+    private func clearReconnectTimeout() {
+        reconnectTimeoutToken = UUID()
+        reconnectTimeoutIdentifier = nil
     }
 
     private func scheduleReconnect(_ identifier: UUID) {
