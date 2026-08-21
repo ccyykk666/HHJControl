@@ -108,7 +108,7 @@ final class AppModel: ObservableObject {
             ]
             .compactMap { $0?.nilIfEmpty }
             .uniqued()
-            .joined()
+            .joined(separator: " ")
             .nilIfEmpty ?? "区域信息不可用"
         }
     }

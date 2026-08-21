@@ -11,11 +11,11 @@ struct RootView: View {
             Tab("高级", systemImage: "slider.horizontal.3", value: AppModel.Tab.advanced) { AdvancedView() }
             Tab(value: AppModel.Tab.search, role: .search) { SearchView() }
         }
-        .sheet(isPresented: Binding(get: { !didCompleteOnboarding }, set: { if !$0 { didCompleteOnboarding = true } })) {
-            OnboardingView {
-                didCompleteOnboarding = true
-                model.prepareForLaunch()
-            }
+        .sheet(
+            isPresented: Binding(get: { !didCompleteOnboarding }, set: { if !$0 { didCompleteOnboarding = true } }),
+            onDismiss: { model.prepareForLaunch() }
+        ) {
+            OnboardingView { didCompleteOnboarding = true }
         }
         .onAppear {
             if didCompleteOnboarding { model.prepareForLaunch() }

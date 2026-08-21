@@ -20,6 +20,7 @@ struct HHJMapView: UIViewRepresentable {
         map.addGestureRecognizer(press)
         map.setRegion(.init(center: selection.mapCoordinate, latitudinalMeters: 1_000, longitudinalMeters: 1_000), animated: false)
         context.coordinator.lastRequestID = mapRequestID
+        context.coordinator.centerOnNextUserLocation = selection.source == .currentLocation
         return map
     }
 
