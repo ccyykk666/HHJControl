@@ -77,19 +77,18 @@ final class HHJBluetoothControllerTests: XCTestCase {
         else { XCTFail("Expected authentication timeout") }
     }
 
-    func testAutomaticReconnectStopsAfterFiveAttempts() async {
+    func testAutomaticReconnectStopsAfterFiveAttempts() {
         let transport = FakeBluetoothTransport()
         let controller = HHJBluetoothController(
             transport: transport,
             defaults: UserDefaults(suiteName: UUID().uuidString)!,
-            reconnectDelay: { _ in .zero }
+            reconnectDelay: { _ in .zero },
+            reconnectScheduler: { _, action in action() }
         )
         let id = UUID()
         controller.connect(to: id)
         for _ in 0..<5 {
             transport.send(.connectFailed(id, "offline"))
-            await Task.yield()
-            await Task.yield()
         }
         transport.send(.connectFailed(id, "offline"))
         XCTAssertEqual(transport.connectCalls.count, 6, "one manual attempt plus five bounded reconnects")

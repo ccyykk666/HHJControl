@@ -4,6 +4,7 @@ import SwiftUI
 @MainActor
 final class HHJBluetoothController: ObservableObject {
     typealias AuthenticationTimeoutAction = @MainActor @Sendable () -> Void
+    typealias ReconnectAction = @MainActor @Sendable () -> Void
     enum State: Equatable {
         case idle, scanning, connecting, discovering, authenticating, ready, reconnecting(attempt: Int), bluetoothUnavailable(String), failed(String)
 
@@ -34,6 +35,7 @@ final class HHJBluetoothController: ObservableObject {
     private let authenticationTimeout: Duration
     private let reconnectDelay: (Int) -> Duration
     private let authenticationTimeoutScheduler: (Duration, @escaping AuthenticationTimeoutAction) -> Void
+    private let reconnectScheduler: (Duration, @escaping ReconnectAction) -> Void
     private var activeIdentifier: UUID?
     private var servicesFound = Set<String>()
     private var characteristicsFound = Set<String>()
@@ -52,13 +54,20 @@ final class HHJBluetoothController: ObservableObject {
         defaults: UserDefaults = .standard,
         authenticationTimeout: Duration = .seconds(8),
         reconnectDelay: @escaping (Int) -> Duration = { .seconds($0) },
-        authenticationTimeoutScheduler: ((Duration, @escaping AuthenticationTimeoutAction) -> Void)? = nil
+        authenticationTimeoutScheduler: ((Duration, @escaping AuthenticationTimeoutAction) -> Void)? = nil,
+        reconnectScheduler: ((Duration, @escaping ReconnectAction) -> Void)? = nil
     ) {
         self.transport = transport
         self.defaults = defaults
         self.authenticationTimeout = authenticationTimeout
         self.reconnectDelay = reconnectDelay
         self.authenticationTimeoutScheduler = authenticationTimeoutScheduler ?? { duration, action in
+            Task { @MainActor in
+                try? await Task.sleep(for: duration)
+                action()
+            }
+        }
+        self.reconnectScheduler = reconnectScheduler ?? { duration, action in
             Task { @MainActor in
                 try? await Task.sleep(for: duration)
                 action()
@@ -269,8 +278,7 @@ final class HHJBluetoothController: ObservableObject {
         let duration = reconnectDelay(delay)
         state = .reconnecting(attempt: reconnectAttempt)
         log(.info, "将在 \(delay) 秒后重连")
-        Task { [weak self] in
-            try? await Task.sleep(for: duration)
+        reconnectScheduler(duration) { [weak self] in
             guard let self, self.isForeground, !self.manualDisconnect, self.activeIdentifier == identifier else { return }
             self.state = .connecting
             self.transport.connect(identifier: identifier)
