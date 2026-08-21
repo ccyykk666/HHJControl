@@ -97,12 +97,14 @@ final class AppModel: ObservableObject {
                   self.selection.mapCoordinate.latitude == coordinate.latitude,
                   self.selection.mapCoordinate.longitude == coordinate.longitude else { return }
             if updateName { self.selection.address = item?.name?.nilIfEmpty ?? "已选择的位置" }
+            let placemark = item?.placemark
+            let country = placemark?.isoCountryCode?.uppercased() == "CN" ? nil : placemark?.country
             self.administrativeArea = [
-                item?.placemark.country,
-                item?.placemark.administrativeArea,
-                item?.placemark.subAdministrativeArea,
-                item?.placemark.locality,
-                item?.placemark.subLocality
+                country,
+                placemark?.administrativeArea,
+                placemark?.subAdministrativeArea,
+                placemark?.locality,
+                placemark?.subLocality
             ]
             .compactMap { $0?.nilIfEmpty }
             .uniqued()
