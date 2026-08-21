@@ -1,6 +1,5 @@
 import CoreLocation
 import Foundation
-import MapKit
 import SwiftUI
 
 @MainActor
@@ -17,8 +16,7 @@ final class AppModel: ObservableObject {
     let bluetooth: HHJBluetoothController
     let store: AppDataStore
     let locationProvider: DeviceLocationProvider
-    private var reverseGeocodingRequest: MKReverseGeocodingRequest?
-    private var fallbackGeocoder: CLGeocoder?
+    private var geocoder: CLGeocoder?
     private var reverseGeocodingTask: Task<Void, Never>?
     private var reverseGeocodingID = UUID()
     private var didPrepareForLaunch = false
@@ -99,69 +97,17 @@ final class AppModel: ObservableObject {
 
     private func resolveAddress(for coordinate: CLLocationCoordinate2D, updateName: Bool) {
         reverseGeocodingTask?.cancel()
-        reverseGeocodingRequest?.cancel()
-        fallbackGeocoder?.cancelGeocode()
+        geocoder?.cancelGeocode()
         let requestID = UUID()
         reverseGeocodingID = requestID
         logGeocoding(.info, "反向地理编码排队：\(coordinateText(coordinate))")
 
         reverseGeocodingTask = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(350))
+            try? await Task.sleep(for: .milliseconds(800))
             guard !Task.isCancelled,
                   let self,
                   self.isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate) else { return }
-
-            guard let request = MKReverseGeocodingRequest(location: .init(latitude: coordinate.latitude, longitude: coordinate.longitude)) else {
-                if updateName { self.selection.address = "已选择的位置" }
-                self.administrativeArea = "区域信息不可用"
-                self.logGeocoding(.error, "反向地理编码无法创建请求：\(self.coordinateText(coordinate))")
-                return
-            }
-            self.reverseGeocodingRequest = request
-            self.logGeocoding(.info, "反向地理编码开始：\(self.coordinateText(coordinate))")
-
-            let item: MKMapItem?
-            do {
-                let items = try await request.mapItems
-                item = items.first
-                self.logGeocoding(.info, "反向地理编码返回 \(items.count) 个地点")
-            } catch {
-                guard !Task.isCancelled,
-                      self.isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate) else { return }
-                let error = error as NSError
-                if error.domain == MKErrorDomain, error.code == MKError.Code.placemarkNotFound.rawValue {
-                    self.logGeocoding(.warning, "MapKit 未找到地点；改用系统地址服务")
-                    await self.resolveAddressWithCoreLocation(for: coordinate, updateName: updateName, requestID: requestID)
-                    return
-                }
-
-                if updateName { self.selection.address = "已选择的位置" }
-                self.administrativeArea = "区域信息不可用"
-                self.logGeocoding(.error, "反向地理编码失败：\(error.domain) (\(error.code)) \(error.localizedDescription)")
-                return
-            }
-
-            guard !Task.isCancelled,
-                  self.isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate) else { return }
-            guard let item else {
-                self.logGeocoding(.warning, "MapKit 未返回地点；改用系统地址服务")
-                await self.resolveAddressWithCoreLocation(for: coordinate, updateName: updateName, requestID: requestID)
-                return
-            }
-
-            if updateName {
-                self.selection.address = item.name?.nilIfEmpty
-                    ?? item.address?.shortAddress?.nilIfEmpty
-                    ?? item.addressRepresentations?.cityName?.nilIfEmpty
-                    ?? "已选择的位置"
-            }
-            if let area = self.administrativeArea(for: item) {
-                self.administrativeArea = area
-                self.logGeocoding(.success, "区域信息：\(area)")
-            } else {
-                self.administrativeArea = "区域信息不可用"
-                self.logGeocoding(.warning, "地点未提供可显示的区域信息")
-            }
+            await self.resolveAddressWithCoreLocation(for: coordinate, updateName: updateName, requestID: requestID)
         }
     }
 
@@ -174,7 +120,7 @@ final class AppModel: ObservableObject {
               isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate) else { return }
 
         let geocoder = CLGeocoder()
-        fallbackGeocoder = geocoder
+        self.geocoder = geocoder
         logGeocoding(.info, "系统地址服务开始：\(coordinateText(coordinate))")
 
         let placemark: CLPlacemark?
@@ -229,42 +175,6 @@ final class AppModel: ObservableObject {
 
     private func coordinateText(_ coordinate: CLLocationCoordinate2D) -> String {
         String(format: "%.6f, %.6f", coordinate.latitude, coordinate.longitude)
-    }
-
-    private func administrativeArea(for item: MKMapItem) -> String? {
-        let placemark = item.placemark
-        let representations = item.addressRepresentations
-        let fullAddress = item.address?.fullAddress.nilIfEmpty
-        let regionCode = representations?.region?.identifier ?? placemark.isoCountryCode
-        let isChina = regionCode?.uppercased() == "CN"
-
-        if isChina {
-            return [
-                placemark.administrativeArea,
-                placemark.subAdministrativeArea,
-                placemark.locality,
-                placemark.subLocality,
-                representations?.cityName
-            ]
-            .compactMap { $0?.nilIfEmpty }
-            .uniqued()
-            .joined(separator: " ")
-            .nilIfEmpty
-        }
-
-        return representations?.cityWithContext?.nilIfEmpty
-            ?? [
-                representations?.regionName ?? placemark.country,
-                placemark.administrativeArea,
-                placemark.subAdministrativeArea,
-                representations?.cityName ?? placemark.locality,
-                placemark.subLocality
-            ]
-            .compactMap { $0?.nilIfEmpty }
-            .uniqued()
-            .joined(separator: " ")
-            .nilIfEmpty
-            ?? fullAddress
     }
 
     private func administrativeArea(for placemark: CLPlacemark) -> String? {

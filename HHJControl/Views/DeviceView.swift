@@ -29,7 +29,7 @@ struct DeviceView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     Label(
                         bluetooth.state.title,
-                        systemImage: bluetooth.canSendLocation ? "checkmark.seal.fill" : "antenna.radiowaves.left.and.right"
+                        systemImage: bluetooth.canSendLocation ? "checkmark.seal.fill" : "bluetooth"
                     )
                     .font(.headline)
                     .foregroundStyle(bluetooth.canSendLocation ? .green : .primary)
