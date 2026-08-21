@@ -4,7 +4,6 @@ import UIKit
 struct DeviceView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var bluetooth: HHJBluetoothController
-    @State private var contentHeight: CGFloat = 320
 
     var body: some View {
         VStack(spacing: 0) {
@@ -92,12 +91,7 @@ struct DeviceView: View {
             .padding(20)
         }
         .fixedSize(horizontal: false, vertical: true)
-        .onGeometryChange(for: CGFloat.self) { proxy in
-            proxy.size.height
-        } action: { height in
-            if abs(contentHeight - height) > 1 { contentHeight = height }
-        }
-        .presentationDetents([.height(min(max(contentHeight, 220), 650))])
+        .presentationSizing(.fitted)
         .onAppear(perform: beginScanningIfNeeded)
         .onChange(of: bluetooth.state) { _, state in
             if state == .ready { dismiss() }
