@@ -5,7 +5,6 @@ struct SearchView: View {
     @EnvironmentObject private var model: AppModel
     @StateObject private var search = SearchService()
     @State private var regionMode: SearchRegionMode = .domestic
-    private var usesUITestFixture: Bool { ProcessInfo.processInfo.environment["UITEST_SEARCH_FIXTURE"] == "1" }
 
     var body: some View {
         NavigationStack {
@@ -20,15 +19,7 @@ struct SearchView: View {
                 .padding(.vertical, 10)
 
                 Group {
-                    if usesUITestFixture {
-                        List {
-                            Button("测试地点") {
-                                model.select(.init(latitude: 31.2304, longitude: 121.4737), address: "测试地点", source: .search)
-                                model.selectedTab = .location
-                            }
-                            .accessibilityIdentifier("search.fixture.result")
-                        }
-                    } else if search.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    if search.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         ContentUnavailableView("搜索地点", systemImage: "magnifyingglass", description: Text("输入地址、地标或商户名称。"))
                     } else if !search.results.isEmpty {
                         List(search.results) { result in

@@ -54,7 +54,6 @@ struct LocationView: View {
                             .padding(12)
                             .contentShape(Rectangle())
                             .buttonStyle(.plain)
-                            .accessibilityLabel("蓝牙，\(bluetooth.state.title)")
 
                             Divider().padding(.horizontal, 10)
 
@@ -94,8 +93,6 @@ struct LocationView: View {
                             .frame(width: 44, height: 44)
                             .contentShape(Rectangle())
                             .buttonStyle(.plain)
-                            .accessibilityIdentifier("location.favorite")
-                            .accessibilityLabel(store.isFavorite(model.selection) ? "取消收藏" : "收藏")
                         }
                         Button(action: sendLocation) {
                             HStack(spacing: 8) {
@@ -120,8 +117,6 @@ struct LocationView: View {
                             .font(.headline)
                         }
                         .buttonStyle(.borderedProminent).controlSize(.large)
-                        .accessibilityIdentifier("location.send")
-                        .accessibilityLabel(sendButtonTitle)
                         .disabled(!bluetooth.canSendLocation || !model.selection.isValid)
                         .animation(.easeInOut(duration: 0.2), value: sendButtonState)
                     }
@@ -132,15 +127,6 @@ struct LocationView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showDevices) { DeviceView() }
-        }
-    }
-
-    private var sendButtonTitle: String {
-        switch sendButtonState {
-        case .idle: "设置定位"
-        case .sending: "设置中"
-        case .success: "已设置"
-        case .failure: "设置失败"
         }
     }
 

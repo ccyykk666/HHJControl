@@ -17,7 +17,6 @@ struct DeviceView: View {
                     }
                     .buttonStyle(.glass)
                     .buttonBorderShape(.circle)
-                    .accessibilityLabel("关闭")
                 }
             }
             .padding(.horizontal, 20)

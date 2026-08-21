@@ -27,8 +27,7 @@ struct CoordinateEditorView: View {
                         range: -90...90,
                         step: 1,
                         field: .latitude,
-                        format: "%.6f",
-                        identifier: "coordinate.latitude"
+                        format: "%.6f"
                     )
                     coordinateField(
                         title: "经度",
@@ -37,8 +36,7 @@ struct CoordinateEditorView: View {
                         range: -180...180,
                         step: 1,
                         field: .longitude,
-                        format: "%.6f",
-                        identifier: "coordinate.longitude"
+                        format: "%.6f"
                     )
                     coordinateField(
                         title: "海拔",
@@ -47,8 +45,7 @@ struct CoordinateEditorView: View {
                         range: -500...9000,
                         step: 1,
                         field: .altitude,
-                        format: "%.1f",
-                        identifier: "coordinate.altitude"
+                        format: "%.1f"
                     )
                     if let error { Text(error).foregroundStyle(.red) }
                 }
@@ -77,8 +74,7 @@ struct CoordinateEditorView: View {
         range: ClosedRange<Double>,
         step: Double,
         field: Field,
-        format: String,
-        identifier: String
+        format: String
     ) -> some View {
         HStack {
             Text(title)
@@ -88,7 +84,6 @@ struct CoordinateEditorView: View {
                     .keyboardType(.numbersAndPunctuation)
                     .multilineTextAlignment(.trailing)
                     .focused($editingField, equals: field)
-                    .accessibilityIdentifier(identifier)
                     .frame(minWidth: 92)
             } else {
                 Button {
@@ -100,11 +95,9 @@ struct CoordinateEditorView: View {
                         .foregroundStyle(.primary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityIdentifier(identifier)
             }
             Stepper("", value: animatedValue(value), in: range, step: step)
                 .labelsHidden()
-                .accessibilityLabel("调整\(title)")
         }
     }
 
