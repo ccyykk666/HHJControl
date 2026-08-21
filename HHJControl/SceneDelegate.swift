@@ -15,7 +15,6 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window.rootViewController = UIHostingController(rootView: root)
         window.makeKeyAndVisible()
         self.window = window
-        appDelegate.model.prepareForLaunch()
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {

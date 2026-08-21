@@ -12,7 +12,13 @@ struct RootView: View {
             Tab(value: AppModel.Tab.search, role: .search) { SearchView() }
         }
         .sheet(isPresented: Binding(get: { !didCompleteOnboarding }, set: { if !$0 { didCompleteOnboarding = true } })) {
-            OnboardingView { didCompleteOnboarding = true }
+            OnboardingView {
+                didCompleteOnboarding = true
+                model.prepareForLaunch()
+            }
+        }
+        .onAppear {
+            if didCompleteOnboarding { model.prepareForLaunch() }
         }
         .alert("提示", isPresented: Binding(get: { model.notice != nil }, set: { if !$0 { model.notice = nil } })) {
             Button("好", role: .cancel) { model.notice = nil }

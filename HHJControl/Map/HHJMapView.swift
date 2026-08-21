@@ -28,7 +28,13 @@ struct HHJMapView: UIViewRepresentable {
         if context.coordinator.lastRequestID != mapRequestID {
             context.coordinator.lastRequestID = mapRequestID
             context.coordinator.programmaticMove = true
-            map.setCenter(selection.mapCoordinate, animated: true)
+            if selection.source == .currentLocation {
+                context.coordinator.centerOnNextUserLocation = true
+                context.coordinator.centerOnUserLocation(in: map, fallback: selection.mapCoordinate)
+            } else {
+                context.coordinator.centerOnNextUserLocation = false
+                map.setCenter(selection.mapCoordinate, animated: true)
+            }
         }
     }
 
@@ -36,11 +42,32 @@ struct HHJMapView: UIViewRepresentable {
         var parent: HHJMapView
         var lastRequestID: UUID?
         var programmaticMove = false
+        var centerOnNextUserLocation = false
         init(parent: HHJMapView) { self.parent = parent }
+
+        func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
+            guard centerOnNextUserLocation,
+                  let location = userLocation.location,
+                  location.horizontalAccuracy >= 0 else { return }
+            centerOnNextUserLocation = false
+            programmaticMove = true
+            mapView.setCenter(location.coordinate, animated: true)
+            parent.onSelect(location.coordinate, .currentLocation)
+        }
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
             if programmaticMove { programmaticMove = false; return }
             parent.onSelect(mapView.centerCoordinate, .map)
+        }
+
+        func centerOnUserLocation(in mapView: MKMapView, fallback: CLLocationCoordinate2D) {
+            if let location = mapView.userLocation.location, location.horizontalAccuracy >= 0 {
+                centerOnNextUserLocation = false
+                mapView.setCenter(location.coordinate, animated: true)
+                parent.onSelect(location.coordinate, .currentLocation)
+            } else {
+                mapView.setCenter(fallback, animated: true)
+            }
         }
 
         @objc func longPressed(_ recognizer: UILongPressGestureRecognizer) {
