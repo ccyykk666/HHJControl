@@ -60,7 +60,7 @@ struct HHJMapView: UIViewRepresentable {
             if programmaticMove { programmaticMove = false; return }
             let coordinate = mapView.centerCoordinate
             regionSelectionTask = Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .milliseconds(800))
+                try? await Task.sleep(for: .milliseconds(1_200))
                 guard !Task.isCancelled else { return }
                 self?.parent.onSelect(coordinate, .map, .zero)
             }
