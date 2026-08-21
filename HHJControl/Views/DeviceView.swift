@@ -131,11 +131,11 @@ struct AdvancedView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("手动定位") {
+                Section("当前位置") {
                     LabeledContent("纬度", value: String(format: "%.6f", model.selection.wgs84Latitude))
                     LabeledContent("经度", value: String(format: "%.6f", model.selection.wgs84Longitude))
                     LabeledContent("海拔", value: String(format: "%.1f m", model.selection.altitude))
-                    Button("设置经纬度与海拔") { showEditor = true }
+                    Button("手动设置") { showEditor = true }
                 }
 
                 Section("设备") {

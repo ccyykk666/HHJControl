@@ -28,14 +28,14 @@ final class HHJControlUITests: XCTestCase {
 
     func testAltitudeOutsideRangeShowsValidationError() {
         app.tabBars.buttons["高级"].tap()
-        let editor = app.buttons["设置经纬度与海拔"]
+        let editor = app.buttons["手动设置"]
         XCTAssertTrue(editor.waitForExistence(timeout: 10))
         editor.tap()
         let altitude = app.textFields["coordinate.altitude"]
         XCTAssertTrue(altitude.waitForExistence(timeout: 5))
         altitude.tap()
         altitude.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 12) + "9000.1")
-        app.buttons["保存"].tap()
+        app.buttons["应用"].tap()
         XCTAssertTrue(app.staticTexts["海拔必须在 -500 到 9000 米之间"].waitForExistence(timeout: 5))
     }
 
