@@ -80,7 +80,10 @@ struct LocationView: View {
                                     .lineLimit(2)
                             }
                             Spacer()
-                            Button { store.toggleFavorite(model.selection) } label: {
+                            Button {
+                                store.toggleFavorite(model.selection)
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            } label: {
                                 Image(systemName: store.isFavorite(model.selection) ? "star.fill" : "star")
                                     .foregroundStyle(store.isFavorite(model.selection) ? .orange : .primary)
                             }
