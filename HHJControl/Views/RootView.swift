@@ -11,6 +11,7 @@ struct RootView: View {
             Tab("高级", systemImage: "slider.horizontal.3", value: AppModel.Tab.advanced) { AdvancedView() }
             Tab("搜索", systemImage: "magnifyingglass", value: AppModel.Tab.search) { SearchView() }
         }
+        .background(SearchTabReselectionObserver { model.focusSearch() })
         .sheet(
             isPresented: Binding(get: { !didCompleteOnboarding }, set: { if !$0 { didCompleteOnboarding = true } }),
             onDismiss: { model.prepareForLaunch() }

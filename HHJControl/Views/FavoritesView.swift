@@ -84,13 +84,15 @@ private struct FavoriteEditor: View {
             }
             .navigationTitle("编辑收藏")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button { dismiss() } label: { Image(systemName: "xmark") }
+                }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("保存") {
+                    Button {
                         guard let value = Double(altitude), (-500...9000).contains(value), !place.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                         place.selection.altitude = value
                         store.updateFavorite(place); dismiss()
-                    }
+                    } label: { Image(systemName: "checkmark") }
                 }
             }
             .onAppear { altitude = String(format: "%.1f", place.selection.altitude) }
