@@ -19,9 +19,14 @@ enum SearchRegionMode: String, CaseIterable, Identifiable {
 final class SearchService: NSObject, ObservableObject, @preconcurrency MKLocalSearchCompleterDelegate {
     @Published var query = "" {
         didSet {
+            searchTask?.cancel()
+            activeSearch?.cancel()
+            activeSearch = nil
+            isSearching = false
             results = []
             errorMessage = nil
             completer.queryFragment = acceptsCompletions ? query : ""
+            if !acceptsCompletions { scheduleSearch() }
         }
     }
     @Published private(set) var completions: [MKLocalSearchCompletion] = []
@@ -38,6 +43,7 @@ final class SearchService: NSObject, ObservableObject, @preconcurrency MKLocalSe
     private var mode: SearchRegionMode = .domestic
     private var acceptsCompletions = true
     private var activeSearch: MKLocalSearch?
+    private var searchTask: Task<Void, Never>?
 
     override init() {
         super.init()
@@ -47,6 +53,7 @@ final class SearchService: NSObject, ObservableObject, @preconcurrency MKLocalSe
 
     func configure(region mapRegion: MKCoordinateRegion, mode: SearchRegionMode) {
         self.mode = mode
+        searchTask?.cancel()
         activeSearch?.cancel()
         activeSearch = nil
         isSearching = false
@@ -68,7 +75,6 @@ final class SearchService: NSObject, ObservableObject, @preconcurrency MKLocalSe
                     span: .init(latitudeDelta: 180, longitudeDelta: 360)
                 )
                 regionPriority = .default
-                acceptsCompletions = false
             } else {
                 region = MKCoordinateRegion(
                     center: mapRegion.center,
@@ -78,8 +84,8 @@ final class SearchService: NSObject, ObservableObject, @preconcurrency MKLocalSe
                     )
                 )
                 regionPriority = .required
-                acceptsCompletions = true
             }
+            acceptsCompletions = false
         }
 
         completions = []
@@ -87,7 +93,11 @@ final class SearchService: NSObject, ObservableObject, @preconcurrency MKLocalSe
         completer.regionPriority = regionPriority
         let fragment = query
         completer.queryFragment = ""
-        if acceptsCompletions { completer.queryFragment = fragment }
+        if acceptsCompletions {
+            completer.queryFragment = fragment
+        } else {
+            scheduleSearch()
+        }
     }
 
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
@@ -96,6 +106,23 @@ final class SearchService: NSObject, ObservableObject, @preconcurrency MKLocalSe
     func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) { errorMessage = error.localizedDescription }
 
     func submit() {
+        searchTask?.cancel()
+        performSearch()
+    }
+
+    private func scheduleSearch() {
+        let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+
+        searchTask?.cancel()
+        searchTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled, let self else { return }
+            self.performSearch()
+        }
+    }
+
+    private func performSearch() {
         let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
@@ -104,7 +131,7 @@ final class SearchService: NSObject, ObservableObject, @preconcurrency MKLocalSe
         isSearching = true
 
         let request = MKLocalSearch.Request(naturalLanguageQuery: text, region: region)
-        request.regionPriority = mode == .domestic ? .required : .default
+        request.regionPriority = regionPriority
         request.resultTypes = [.address, .pointOfInterest]
         let search = MKLocalSearch(request: request)
         activeSearch = search
