@@ -52,6 +52,11 @@ struct LocationView: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(2)
+                                if !CoordinateConverter.isInChina(model.selection.mapCoordinate) {
+                                    Link("Powered by Geoapify", destination: URL(string: "https://www.geoapify.com/")!)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                             Spacer()
                             Button { store.toggleFavorite(model.selection) } label: {

@@ -40,12 +40,14 @@ jobs:
           CERT_P12_BASE64: ${{ secrets.CERT_P12_BASE64 }}
           CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
           PROVISIONING_PROFILE_BASE64: ${{ secrets.PROVISIONING_PROFILE_BASE64 }}
+          GEOAPIFY_API_KEY: ${{ secrets.GEOAPIFY_API_KEY }}
         run: |
           set -euo pipefail
           [[ '${{ inputs.bundleId }}' == 'app.sagittarius9983.grape3949' ]] || { echo 'bundleId must be app.sagittarius9983.grape3949'; exit 1; }
           [[ -n "$CERT_P12_BASE64" ]] || { echo 'Missing secret CERT_P12_BASE64'; exit 1; }
           [[ -n "$CERT_PASSWORD" ]] || { echo 'Missing secret CERT_PASSWORD'; exit 1; }
           [[ -n "$PROVISIONING_PROFILE_BASE64" ]] || { echo 'Missing secret PROVISIONING_PROFILE_BASE64'; exit 1; }
+          [[ -n "$GEOAPIFY_API_KEY" ]] || { echo 'Missing secret GEOAPIFY_API_KEY'; exit 1; }
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -129,15 +131,20 @@ jobs:
         run: xcodegen generate
 
       - name: Compile without signing
+        env:
+          GEOAPIFY_API_KEY: ${{ secrets.GEOAPIFY_API_KEY }}
         run: |
           xcodebuild build \
             -project HHJControl.xcodeproj \
             -scheme HHJControl \
             -destination 'generic/platform=iOS' \
             CODE_SIGNING_ALLOWED=NO \
+            GEOAPIFY_API_KEY="$GEOAPIFY_API_KEY" \
             CURRENT_PROJECT_VERSION='${{ github.run_number }}'
 
       - name: Archive with manual signing
+        env:
+          GEOAPIFY_API_KEY: ${{ secrets.GEOAPIFY_API_KEY }}
         run: |
           set -euo pipefail
           xcodebuild clean archive \
@@ -152,6 +159,7 @@ jobs:
             CODE_SIGN_IDENTITY='Apple Distribution' \
             PRODUCT_BUNDLE_IDENTIFIER='${{ inputs.bundleId }}' \
             INFOPLIST_KEY_CFBundleDisplayName='${{ inputs.appName }}' \
+            GEOAPIFY_API_KEY="$GEOAPIFY_API_KEY" \
             CURRENT_PROJECT_VERSION='${{ github.run_number }}'
 
       - name: Export signed IPA
@@ -186,6 +194,7 @@ jobs:
           [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")" == '${{ inputs.bundleId }}' ]]
           [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")" == '1.0.0' ]]
           [[ "$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP/Info.plist")" == '26.0' ]]
+          [[ -n "$(/usr/libexec/PlistBuddy -c 'Print :GEOAPIFY_API_KEY' "$APP/Info.plist")" ]] || { echo 'Geoapify API key missing from app configuration'; exit 1; }
           [[ -f "$APP/PrivacyInfo.xcprivacy" ]] || { echo 'PrivacyInfo.xcprivacy missing'; exit 1; }
           if find "$APP/Frameworks" -maxdepth 1 -type d -name '*.framework' 2>/dev/null | grep -q .; then
             echo 'Third-party or unexpected .framework bundle found:'

@@ -25,6 +25,7 @@ final class AppModel: ObservableObject {
     private var reverseGeocodingTask: Task<Void, Never>?
     private var reverseGeocodingID = UUID()
     private var didPrepareForLaunch = false
+    private let geoapify = GeoapifyService()
 
     init(bluetooth: HHJBluetoothController? = nil, store: AppDataStore? = nil) {
         self.bluetooth = bluetooth ?? HHJBluetoothController()
@@ -72,6 +73,24 @@ final class AppModel: ObservableObject {
         administrativeArea = administrativeArea(for: item)
             ?? fallback
             ?? "区域信息不可用"
+        mapRequestID = UUID()
+    }
+
+    func selectResolvedSearch(
+        coordinate: CLLocationCoordinate2D,
+        title: String,
+        administrativeArea: String?
+    ) {
+        reverseGeocodingTask?.cancel()
+        reverseGeocodingRequest?.cancel()
+        reverseGeocodingID = UUID()
+        selection = LocationSelection(
+            mapCoordinate: coordinate,
+            altitude: selection.altitude,
+            address: title,
+            source: .search
+        )
+        self.administrativeArea = administrativeArea?.nilIfEmpty ?? "区域信息不可用"
         mapRequestID = UUID()
     }
 
@@ -127,6 +146,24 @@ final class AppModel: ObservableObject {
             guard !Task.isCancelled,
                   let self,
                   self.isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate) else { return }
+
+            if !CoordinateConverter.isInChina(coordinate) {
+                do {
+                    let place = try await self.geoapify.reverse(coordinate)
+                    guard !Task.isCancelled,
+                          self.isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate) else { return }
+                    if updateName { self.selection.address = place.title }
+                    self.administrativeArea = place.administrativeArea.nilIfEmpty
+                        ?? place.subtitle.nilIfEmpty
+                        ?? "区域信息不可用"
+                } catch {
+                    guard !Task.isCancelled,
+                          self.isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate) else { return }
+                    if updateName { self.selection.address = "已选择的位置" }
+                    self.administrativeArea = error.localizedDescription
+                }
+                return
+            }
 
             guard let request = MKReverseGeocodingRequest(
                 location: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)

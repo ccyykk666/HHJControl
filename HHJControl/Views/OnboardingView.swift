@@ -14,7 +14,6 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 18) {
                 OnboardingRow(icon: "cable.connector", title: "需要兼容设备", detail: "App 无法脱离硬件独立修改系统定位。")
                 OnboardingRow(icon: "antenna.radiowaves.left.and.right", title: "仅使用必要权限", detail: "只请求蓝牙和使用期间定位权限。")
-                OnboardingRow(icon: "lock.shield", title: "数据留在本机", detail: "没有账号、统计 SDK 或网络上传。")
             }
             Spacer()
             Button("开始使用", action: complete).buttonStyle(.borderedProminent).controlSize(.large).frame(maxWidth: .infinity)

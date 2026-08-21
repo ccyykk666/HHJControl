@@ -12,7 +12,7 @@ App 本身不能通过公开 iOS API 修改系统定位。实际效果依赖兼�
 - 中国范围 GCJ‑02 → WGS‑84，境外原样发送
 - 海拔编辑、收藏、最近记录与遮盖认证信息的诊断日志
 - 原生 iOS 26 Tab/Search 与 Liquid Glass
-- 本机 Codable JSON 存储；无账号、自建网络请求、统计 SDK 或第三方 Framework
+- 本机 Codable JSON 存储；无账号、统计 SDK 或第三方 Framework
 
 ## 本地生成工程
 
@@ -36,6 +36,8 @@ Bundle ID 固定为 `app.sagittarius9983.grape3949`，最低系统为 iOS 26.0�
 .\scripts\setup-secrets.ps1 -CertificatePath "C:\path\cert.p12" -ProvisioningProfilePath "C:\path\profile.mobileprovision"
 ```
 
+海外搜索还需要在仓库 Actions Secrets 中配置 `GEOAPIFY_API_KEY`。
+
 然后运行：
 
 ```sh
@@ -47,4 +49,4 @@ gh run watch --exit-status -R ccyykk666/HHJControl
 
 ## 安全与隐私
 
-仓库不包含原 IPA 的反编译代码、资源、README 或脚本，不包含证书、描述文件、Base64、密码或 Token。应用不声明蓝牙后台模式，不开放 ATS，不进行自建网络请求或数据上传；地点搜索与地址解析仅使用系统 MapKit。应用不跟踪或收集用户数据。
+仓库不包含原 IPA 的反编译代码、资源、README 或脚本，不包含证书、描述文件、Base64、密码或 Token。应用不声明蓝牙后台模式，也不开放 ATS。国内地点搜索与地址解析使用系统 MapKit；选择“国外”时，搜索关键词或地图坐标会发送给 Geoapify，以获取海外地点和地址结果。API Key 由 GitHub Actions Secret 注入，不进入 Git 历史。

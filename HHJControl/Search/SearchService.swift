@@ -2,10 +2,12 @@ import MapKit
 import SwiftUI
 
 struct SearchResolvedPlace: Identifiable {
-    let id = UUID()
-    let mapItem: MKMapItem
+    let id: String
+    let mapItem: MKMapItem?
+    let coordinate: CLLocationCoordinate2D
     let title: String
     let subtitle: String
+    let administrativeArea: String?
 }
 
 enum SearchRegionMode: String, CaseIterable, Identifiable {
@@ -44,6 +46,7 @@ final class SearchService: NSObject, ObservableObject, @preconcurrency MKLocalSe
     private var acceptsCompletions = true
     private var activeSearch: MKLocalSearch?
     private var searchTask: Task<Void, Never>?
+    private let geoapify = GeoapifyService()
 
     override init() {
         super.init()
@@ -69,22 +72,8 @@ final class SearchService: NSObject, ObservableObject, @preconcurrency MKLocalSe
             regionPriority = .required
             acceptsCompletions = true
         case .international:
-            if CoordinateConverter.isInChina(mapRegion.center) {
-                region = MKCoordinateRegion(
-                    center: .init(latitude: 0, longitude: 0),
-                    span: .init(latitudeDelta: 180, longitudeDelta: 360)
-                )
-                regionPriority = .default
-            } else {
-                region = MKCoordinateRegion(
-                    center: mapRegion.center,
-                    span: .init(
-                        latitudeDelta: max(mapRegion.span.latitudeDelta, 0.5),
-                        longitudeDelta: max(mapRegion.span.longitudeDelta, 0.5)
-                    )
-                )
-                regionPriority = .required
-            }
+            region = mapRegion
+            regionPriority = .default
             acceptsCompletions = false
         }
 
@@ -107,7 +96,8 @@ final class SearchService: NSObject, ObservableObject, @preconcurrency MKLocalSe
 
     func submit() {
         searchTask?.cancel()
-        performSearch()
+        if mode == .domestic { performDomesticSearch() }
+        else { performInternationalSearch() }
     }
 
     private func scheduleSearch() {
@@ -118,11 +108,11 @@ final class SearchService: NSObject, ObservableObject, @preconcurrency MKLocalSe
         searchTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(600))
             guard !Task.isCancelled, let self else { return }
-            self.performSearch()
+            await self.performInternationalSearch(text: text)
         }
     }
 
-    private func performSearch() {
+    private func performDomesticSearch() {
         let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
@@ -143,12 +133,45 @@ final class SearchService: NSObject, ObservableObject, @preconcurrency MKLocalSe
                     self.errorMessage = error.localizedDescription
                     return
                 }
-                self.results = response?.mapItems
-                    .filter(self.matchesCurrentMode(_:))
-                    .map(self.resolvedPlace(from:)) ?? []
+                self.results = response?.mapItems.map(self.resolvedPlace(from:)) ?? []
                 if self.results.isEmpty { self.errorMessage = "未找到相关地点" }
             }
         }
+    }
+
+    private func performInternationalSearch() {
+        let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        searchTask?.cancel()
+        searchTask = Task { [weak self] in
+            guard let self else { return }
+            await self.performInternationalSearch(text: text)
+        }
+    }
+
+    private func performInternationalSearch(text: String) async {
+        errorMessage = nil
+        isSearching = true
+        do {
+            let bias = CoordinateConverter.isInChina(region.center) ? nil : region.center
+            let places = try await geoapify.search(text, bias: bias)
+            guard !Task.isCancelled, query.trimmingCharacters(in: .whitespacesAndNewlines) == text else { return }
+            results = places.map {
+                SearchResolvedPlace(
+                    id: $0.id,
+                    mapItem: nil,
+                    coordinate: $0.coordinate,
+                    title: $0.title,
+                    subtitle: $0.subtitle,
+                    administrativeArea: $0.administrativeArea
+                )
+            }
+            if results.isEmpty { errorMessage = "未找到相关地点" }
+        } catch {
+            guard !Task.isCancelled else { return }
+            errorMessage = error.localizedDescription
+        }
+        isSearching = false
     }
 
     func resolve(_ completion: MKLocalSearchCompletion, completionHandler: @escaping (Result<SearchResolvedPlace, Error>) -> Void) {
@@ -161,31 +184,27 @@ final class SearchService: NSObject, ObservableObject, @preconcurrency MKLocalSe
                 completionHandler(.failure(NSError(domain: "HHJSearch", code: 404, userInfo: [NSLocalizedDescriptionKey: "未找到该地点"])))
                 return
             }
-            guard self.matchesCurrentMode(item) else {
-                completionHandler(.failure(NSError(domain: "HHJSearch", code: 422, userInfo: [NSLocalizedDescriptionKey: "该地点不属于当前搜索区域"])))
-                return
-            }
             completionHandler(.success(SearchResolvedPlace(
+                id: UUID().uuidString,
                 mapItem: item,
+                coordinate: item.location.coordinate,
                 title: item.name.flatMap { $0.isEmpty ? nil : $0 } ?? completion.title,
-                subtitle: completion.subtitle
+                subtitle: completion.subtitle,
+                administrativeArea: nil
             )))
         }
     }
 
     private func resolvedPlace(from item: MKMapItem) -> SearchResolvedPlace {
         SearchResolvedPlace(
+            id: UUID().uuidString,
             mapItem: item,
+            coordinate: item.location.coordinate,
             title: item.name.flatMap { $0.isEmpty ? nil : $0 }
                 ?? item.address?.shortAddress
                 ?? "已选择的位置",
-            subtitle: item.address?.fullAddress ?? ""
+            subtitle: item.address?.fullAddress ?? "",
+            administrativeArea: nil
         )
-    }
-
-    private func matchesCurrentMode(_ item: MKMapItem) -> Bool {
-        let regionCode = item.addressRepresentations?.region?.identifier ?? item.placemark.isoCountryCode
-        let isDomestic = regionCode?.uppercased() == "CN"
-        return mode == .domestic ? isDomestic : !isDomestic
     }
 }

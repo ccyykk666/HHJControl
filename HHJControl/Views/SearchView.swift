@@ -56,6 +56,13 @@ struct SearchView: View {
                         }
                     }
                 }
+
+                if regionMode == .international {
+                    Link("Powered by Geoapify", destination: URL(string: "https://www.geoapify.com/")!)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 6)
+                }
             }
             .navigationTitle("搜索")
             .searchable(text: $search.query, placement: .navigationBarDrawer(displayMode: .always), prompt: "地址或地点")
@@ -71,7 +78,15 @@ struct SearchView: View {
     }
 
     private func choose(_ result: SearchResolvedPlace) {
-        model.select(result.mapItem, title: result.title, regionFallback: result.subtitle)
+        if let item = result.mapItem {
+            model.select(item, title: result.title, regionFallback: result.subtitle)
+        } else {
+            model.selectResolvedSearch(
+                coordinate: result.coordinate,
+                title: result.title,
+                administrativeArea: result.administrativeArea
+            )
+        }
         model.selectedTab = .location
     }
 
