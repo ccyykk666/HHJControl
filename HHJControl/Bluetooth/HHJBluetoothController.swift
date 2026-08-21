@@ -139,8 +139,8 @@ final class HHJBluetoothController: ObservableObject {
     func sendLocation(_ selection: LocationSelection, date: Date = Date()) throws {
         guard canSendLocation, let identifier = activeIdentifier else { throw ControllerError.notReady }
         let payload = try HHJPacketEncoder.locationPayload(selection: selection, date: date)
-        transport.write(payload, characteristicUUID: HHJProtocolConstants.locationWrite, withResponse: false, identifier: identifier)
-        log(.success, "TX 定位数据 \(payload.count) 字节 → 32E1")
+        try transport.write(payload, characteristicUUID: HHJProtocolConstants.locationWrite, withResponse: false, identifier: identifier)
+        log(.info, "定位指令 \(payload.count) 字节已进入发送流程 → 32E1")
     }
 
     func setForeground(_ value: Bool) {
@@ -213,7 +213,12 @@ final class HHJBluetoothController: ObservableObject {
             state = .authenticating
             let payload = HHJPacketEncoder.authPayload(at: Date())
             log(.info, "TX 认证 \(payload.count) 字节：<Unix秒>_••••••••")
-            transport.write(payload, characteristicUUID: HHJProtocolConstants.authWrite, withResponse: true, identifier: identifier)
+            do {
+                try transport.write(payload, characteristicUUID: HHJProtocolConstants.authWrite, withResponse: true, identifier: identifier)
+            } catch {
+                fail("认证写入失败：\(error.localizedDescription)")
+                return
+            }
             startAuthenticationTimeout()
         case .received(let identifier, let characteristic, let data):
             guard identifier == activeIdentifier else { return }
@@ -226,6 +231,9 @@ final class HHJBluetoothController: ObservableObject {
                 state = .ready
                 log(.success, "认证成功；定位发送已启用")
             }
+        case .writeSubmitted(let identifier, let characteristic):
+            guard identifier == activeIdentifier else { return }
+            log(.info, "写入 \(shortUUID(characteristic)) 已提交给蓝牙系统（无响应）")
         case .writeCompleted(let identifier, let characteristic, let error):
             guard identifier == activeIdentifier else { return }
             if let error { fail("写入 \(shortUUID(characteristic)) 失败：\(error)") }

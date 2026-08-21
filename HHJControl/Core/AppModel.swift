@@ -24,7 +24,6 @@ final class AppModel: ObservableObject {
     private var reverseGeocodingRequest: MKReverseGeocodingRequest?
     private var reverseGeocodingTask: Task<Void, Never>?
     private var reverseGeocodingID = UUID()
-    private var locationRefreshTask: Task<Void, Never>?
     private var didPrepareForLaunch = false
     private let geoapify = GeoapifyService()
 
@@ -48,7 +47,6 @@ final class AppModel: ObservableObject {
         source: LocationSelection.Source,
         moveMap: Bool = true
     ) {
-        locationRefreshTask?.cancel()
         selection = LocationSelection(mapCoordinate: coordinate, altitude: altitude ?? selection.altitude, address: address ?? "正在获取地址…", source: source)
         administrativeArea = "正在获取区域…"
         if moveMap { mapRequestID = UUID() }
@@ -56,7 +54,6 @@ final class AppModel: ObservableObject {
     }
 
     func select(_ item: MKMapItem, title: String? = nil, regionFallback: String? = nil) {
-        locationRefreshTask?.cancel()
         reverseGeocodingTask?.cancel()
         reverseGeocodingRequest?.cancel()
         reverseGeocodingID = UUID()
@@ -84,7 +81,6 @@ final class AppModel: ObservableObject {
         title: String,
         administrativeArea: String?
     ) {
-        locationRefreshTask?.cancel()
         reverseGeocodingTask?.cancel()
         reverseGeocodingRequest?.cancel()
         reverseGeocodingID = UUID()
@@ -103,7 +99,6 @@ final class AppModel: ObservableObject {
     }
 
     func load(_ value: LocationSelection) {
-        locationRefreshTask?.cancel()
         selection = value
         administrativeArea = "正在获取区域…"
         selectedTab = .location
@@ -130,37 +125,15 @@ final class AppModel: ObservableObject {
 
     @discardableResult
     func sendSelection() -> Bool {
-        locationRefreshTask?.cancel()
         let value = selection
         do {
             guard value.isValid else { throw HHJPacketError.invalidAltitude }
             try bluetooth.sendLocation(value)
-            store.addRecord(.init(selection: value, result: .success, message: "已写入设备"))
-            refreshLocationTransmission(value)
+            store.addRecord(.init(selection: value, result: .success, message: "已提交发送"))
             return true
         } catch {
             store.addRecord(.init(selection: value, result: .failure, message: error.localizedDescription))
             return false
-        }
-    }
-
-    /// The location characteristic has no acknowledgement. Refresh briefly so a location
-    /// selected while system positioning is unavailable is still presented when it returns.
-    private func refreshLocationTransmission(_ value: LocationSelection) {
-        locationRefreshTask = Task { [weak self] in
-            for _ in 1...14 {
-                do {
-                    try await Task.sleep(for: .seconds(1))
-                } catch {
-                    return
-                }
-                guard let self, self.bluetooth.canSendLocation else { return }
-                do {
-                    try self.bluetooth.sendLocation(value)
-                } catch {
-                    return
-                }
-            }
         }
     }
 

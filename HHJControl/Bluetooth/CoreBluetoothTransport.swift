@@ -3,11 +3,18 @@ import Foundation
 
 @MainActor
 final class CoreBluetoothTransport: NSObject, BluetoothTransport {
+    private struct PendingWrite {
+        let data: Data
+        let characteristicUUID: String
+        let identifier: UUID
+    }
+
     var eventHandler: ((BluetoothTransportEvent) -> Void)?
 
     private lazy var central = CBCentralManager(delegate: self, queue: .main)
     private var peripherals: [UUID: CBPeripheral] = [:]
     private var characteristics: [UUID: [String: CBCharacteristic]] = [:]
+    private var pendingWithoutResponseWrites: [PendingWrite] = []
     private var scanningRequested = false
     private var pendingConnection: UUID?
 
@@ -43,6 +50,7 @@ final class CoreBluetoothTransport: NSObject, BluetoothTransport {
     }
 
     func disconnect(identifier: UUID) {
+        pendingWithoutResponseWrites.removeAll { $0.identifier == identifier }
         guard let peripheral = peripherals[identifier] else { return }
         central.cancelPeripheralConnection(peripheral)
     }
@@ -67,12 +75,58 @@ final class CoreBluetoothTransport: NSObject, BluetoothTransport {
         peripherals[identifier]?.setNotifyValue(enabled, for: characteristic)
     }
 
-    func write(_ data: Data, characteristicUUID: String, withResponse: Bool, identifier: UUID) {
-        guard let characteristic = characteristics[identifier]?[normalize(characteristicUUID)] else {
-            eventHandler?(.writeCompleted(identifier, characteristic: characteristicUUID, error: "写入特征不存在"))
-            return
+    func write(_ data: Data, characteristicUUID: String, withResponse: Bool, identifier: UUID) throws {
+        guard let peripheral = peripherals[identifier], peripheral.state == .connected else {
+            throw BluetoothTransportError.disconnected
         }
-        peripherals[identifier]?.writeValue(data, for: characteristic, type: withResponse ? .withResponse : .withoutResponse)
+        guard let characteristic = characteristics[identifier]?[normalize(characteristicUUID)] else {
+            throw BluetoothTransportError.characteristicMissing
+        }
+        let writeType: CBCharacteristicWriteType = withResponse ? .withResponse : .withoutResponse
+        let maximumLength = peripheral.maximumWriteValueLength(for: writeType)
+        guard data.count <= maximumLength else {
+            throw BluetoothTransportError.valueTooLong(actual: data.count, maximum: maximumLength)
+        }
+
+        if withResponse {
+            peripheral.writeValue(data, for: characteristic, type: .withResponse)
+        } else if peripheral.canSendWriteWithoutResponse {
+            submitWithoutResponse(data, characteristic: characteristic, peripheral: peripheral)
+        } else {
+            enqueueLatestWithoutResponse(data, characteristicUUID: characteristicUUID, identifier: identifier)
+        }
+    }
+
+    private func enqueueLatestWithoutResponse(_ data: Data, characteristicUUID: String, identifier: UUID) {
+        let normalizedUUID = normalize(characteristicUUID)
+        pendingWithoutResponseWrites.removeAll {
+            $0.identifier == identifier && normalize($0.characteristicUUID) == normalizedUUID
+        }
+        pendingWithoutResponseWrites.append(.init(data: data, characteristicUUID: characteristicUUID, identifier: identifier))
+    }
+
+    private func flushWithoutResponseWrites(for peripheral: CBPeripheral) {
+        while peripheral.canSendWriteWithoutResponse,
+              let index = pendingWithoutResponseWrites.firstIndex(where: { $0.identifier == peripheral.identifier }) {
+            let pending = pendingWithoutResponseWrites.remove(at: index)
+            guard let characteristic = characteristics[pending.identifier]?[normalize(pending.characteristicUUID)] else {
+                eventHandler?(.writeCompleted(
+                    pending.identifier,
+                    characteristic: pending.characteristicUUID,
+                    error: "写入特征不存在"
+                ))
+                continue
+            }
+            submitWithoutResponse(pending.data, characteristic: characteristic, peripheral: peripheral)
+        }
+    }
+
+    private func submitWithoutResponse(_ data: Data, characteristic: CBCharacteristic, peripheral: CBPeripheral) {
+        peripheral.writeValue(data, for: characteristic, type: .withoutResponse)
+        eventHandler?(.writeSubmitted(
+            peripheral.identifier,
+            characteristic: normalize(characteristic.uuid.uuidString)
+        ))
     }
 
     private func normalize(_ uuid: String) -> String { CBUUID(string: uuid).uuidString.uppercased() }
@@ -113,6 +167,7 @@ extension CoreBluetoothTransport: @preconcurrency CBCentralManagerDelegate {
     }
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
+        pendingWithoutResponseWrites.removeAll { $0.identifier == peripheral.identifier }
         characteristics[peripheral.identifier] = nil
         eventHandler?(.disconnected(peripheral.identifier, error?.localizedDescription))
     }
@@ -148,5 +203,9 @@ extension CoreBluetoothTransport: @preconcurrency CBPeripheralDelegate {
 
     func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
         eventHandler?(.writeCompleted(peripheral.identifier, characteristic: normalize(characteristic.uuid.uuidString), error: error?.localizedDescription))
+    }
+
+    func peripheralIsReady(toSendWriteWithoutResponse peripheral: CBPeripheral) {
+        flushWithoutResponseWrites(for: peripheral)
     }
 }

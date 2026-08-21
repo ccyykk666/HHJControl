@@ -145,5 +145,5 @@ private final class FakeBluetoothTransport: BluetoothTransport {
     func discoverServices(_ serviceUUIDs: [String], identifier: UUID) {}
     func discoverCharacteristics(_ characteristicUUIDs: [String], serviceUUID: String, identifier: UUID) {}
     func setNotify(_ enabled: Bool, characteristicUUID: String, identifier: UUID) {}
-    func write(_ data: Data, characteristicUUID: String, withResponse: Bool, identifier: UUID) { writes.append((data, characteristicUUID, withResponse)) }
+    func write(_ data: Data, characteristicUUID: String, withResponse: Bool, identifier: UUID) throws { writes.append((data, characteristicUUID, withResponse)) }
 }
