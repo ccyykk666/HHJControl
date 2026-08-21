@@ -97,6 +97,7 @@ final class AppModel: ObservableObject {
                   self.selection.mapCoordinate.longitude == coordinate.longitude else { return }
             if updateName {
                 self.selection.address = item?.name?.nilIfEmpty
+                    ?? item?.address?.shortAddress?.nilIfEmpty
                     ?? item?.addressRepresentations?.cityName?.nilIfEmpty
                     ?? "已选择的位置"
             }
@@ -107,6 +108,7 @@ final class AppModel: ObservableObject {
     private func administrativeArea(for item: MKMapItem) -> String? {
         let placemark = item.placemark
         let representations = item.addressRepresentations
+        let fullAddress = item.address?.fullAddress.nilIfEmpty
         let regionCode = representations?.region?.identifier ?? placemark.isoCountryCode
         let isChina = regionCode?.uppercased() == "CN"
 
@@ -136,6 +138,7 @@ final class AppModel: ObservableObject {
             .uniqued()
             .joined(separator: " ")
             .nilIfEmpty
+            ?? fullAddress
     }
 }
 
