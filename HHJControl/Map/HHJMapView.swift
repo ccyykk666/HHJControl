@@ -54,13 +54,17 @@ struct HHJMapView: UIViewRepresentable {
             parent.onUserLocationUpdate(location)
         }
 
+        func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
+            regionSelectionTask?.cancel()
+        }
+
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
             parent.onRegionChange(mapView.region)
             regionSelectionTask?.cancel()
             if programmaticMove { programmaticMove = false; return }
             let coordinate = mapView.centerCoordinate
             regionSelectionTask = Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .milliseconds(1_200))
+                try? await Task.sleep(for: .milliseconds(1_500))
                 guard !Task.isCancelled else { return }
                 self?.parent.onSelect(coordinate, .map, .zero)
             }
