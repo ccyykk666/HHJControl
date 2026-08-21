@@ -22,7 +22,7 @@ final class HHJControlUITests: XCTestCase {
         let result = app.buttons["search.fixture.result"]
         XCTAssertTrue(result.waitForExistence(timeout: 5))
         result.tap()
-        XCTAssertTrue(app.staticTexts["HHJ 测试地点"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["测试地点"].waitForExistence(timeout: 5))
         XCTAssertTrue(tabBar.buttons["定位"].isSelected)
     }
 

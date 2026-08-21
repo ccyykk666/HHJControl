@@ -14,7 +14,7 @@ struct RootView: View {
         .sheet(isPresented: Binding(get: { !didCompleteOnboarding }, set: { if !$0 { didCompleteOnboarding = true } })) {
             OnboardingView { didCompleteOnboarding = true }
         }
-        .alert("HHJControl", isPresented: Binding(get: { model.notice != nil }, set: { if !$0 { model.notice = nil } })) {
+        .alert("提示", isPresented: Binding(get: { model.notice != nil }, set: { if !$0 { model.notice = nil } })) {
             Button("好", role: .cancel) { model.notice = nil }
         } message: { Text(model.notice ?? "") }
     }

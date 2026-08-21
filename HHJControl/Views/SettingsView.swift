@@ -18,10 +18,10 @@ struct SettingsView: View {
                 Text("收藏、最近记录和偏好仅保存在本机。App 不读取或保存证书、GitHub Token 和签名材料。")
             }
             Section("关于") {
-                LabeledContent("应用", value: "HHJControl")
+                LabeledContent("应用", value: "设备控制")
                 LabeledContent("版本", value: version)
                 LabeledContent("最低系统", value: "iOS 26.0")
-                Text("HHJControl 只负责通过 BLE 配置兼容尾插，本身不能通过公开 iOS API 修改系统定位。")
+                Text("本应用只负责通过 BLE 配置兼容设备，本身不能通过公开 iOS API 修改系统定位。")
             }
         }.navigationTitle("设置")
     }
@@ -49,4 +49,3 @@ struct SettingsView: View {
         return "\(info?["CFBundleShortVersionString"] as? String ?? "1.0.0") (\(info?["CFBundleVersion"] as? String ?? "1"))"
     }
 }
-

@@ -11,8 +11,8 @@ struct SearchView: View {
             Group {
                 if usesUITestFixture {
                     List {
-                        Button("HHJ 测试地点") {
-                            model.select(.init(latitude: 31.2304, longitude: 121.4737), address: "HHJ 测试地点", source: .search)
+                        Button("测试地点") {
+                            model.select(.init(latitude: 31.2304, longitude: 121.4737), address: "测试地点", source: .search)
                             model.selectedTab = .location
                         }
                         .accessibilityIdentifier("search.fixture.result")

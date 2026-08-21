@@ -59,7 +59,7 @@ final class AppModel: ObservableObject {
         do {
             guard selection.isValid else { throw HHJPacketError.invalidAltitude }
             try bluetooth.sendLocation(selection)
-            store.addRecord(.init(selection: selection, result: .success, message: "已写入 HHJ 尾插"))
+            store.addRecord(.init(selection: selection, result: .success, message: "已写入设备"))
             notice = "定位数据已发送"
         } catch {
             store.addRecord(.init(selection: selection, result: .failure, message: error.localizedDescription))

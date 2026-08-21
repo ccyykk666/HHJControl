@@ -23,11 +23,11 @@ struct DeviceView: View {
                     }
                 }
 
-                Section("HHJ 尾插") {
+                Section("设备列表") {
                     if bluetooth.devices.isEmpty {
                         HStack {
                             ProgressView().opacity(bluetooth.state == .scanning ? 1 : 0)
-                            Text(bluetooth.state == .scanning ? "正在查找尾插…" : "暂未发现尾插")
+                            Text(bluetooth.state == .scanning ? "正在查找设备…" : "暂未发现设备")
                                 .foregroundStyle(.secondary)
                         }
                     } else {
@@ -51,7 +51,7 @@ struct DeviceView: View {
                     }
                 }
             }
-            .navigationTitle("选择 HHJ 尾插")
+            .navigationTitle("选择设备")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -91,7 +91,7 @@ struct AdvancedView: View {
                     Button("设置经纬度与海拔") { showEditor = true }
                 }
 
-                Section("HHJ 尾插") {
+                Section("设备") {
                     LabeledContent("连接状态", value: bluetooth.state.title)
                     if bluetooth.connectedIdentifier != nil {
                         Button("断开连接", role: .destructive) { bluetooth.disconnect() }

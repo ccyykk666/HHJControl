@@ -15,7 +15,7 @@ final class HHJBluetoothController: ObservableObject {
             case .connecting: "正在连接"
             case .discovering: "正在识别设备"
             case .authenticating: "正在认证"
-            case .ready: "HHJ 已就绪"
+            case .ready: "设备已就绪"
             case .reconnecting(let attempt): "正在重连（\(attempt)/5）"
             case .bluetoothUnavailable: "蓝牙不可用"
             case .failed: "连接失败"
@@ -92,7 +92,7 @@ final class HHJBluetoothController: ObservableObject {
         manualDisconnect = false
         devices.removeAll()
         state = .scanning
-        log(.info, "开始扫描 HHJ 尾插")
+        log(.info, "开始扫描设备")
         transport.startScanning()
     }
 
@@ -166,7 +166,7 @@ final class HHJBluetoothController: ObservableObject {
             reconnectAttempt = 0
             defaults.set(identifier.uuidString, forKey: "lastPeripheralIdentifier")
             state = .discovering
-            log(.success, "已连接；发现 HHJ 服务")
+            log(.success, "已连接；正在发现设备服务")
             transport.discoverServices([HHJProtocolConstants.authService, HHJProtocolConstants.dataService], identifier: identifier)
         case .connectFailed(let identifier, let message):
             guard identifier == activeIdentifier else { return }
@@ -184,7 +184,7 @@ final class HHJBluetoothController: ObservableObject {
             servicesFound = Set(services.map(normalize))
             let authService = normalize(HHJProtocolConstants.authService)
             let dataService = normalize(HHJProtocolConstants.dataService)
-            guard servicesFound.contains(authService), servicesFound.contains(dataService) else { fail("不是兼容的 HHJ 设备：缺少服务 UUID"); return }
+            guard servicesFound.contains(authService), servicesFound.contains(dataService) else { fail("不是兼容设备：缺少服务 UUID"); return }
             log(.info, "已找到服务 FAA1 与 FBB2")
             transport.discoverCharacteristics([HHJProtocolConstants.authWrite, HHJProtocolConstants.authNotify], serviceUUID: HHJProtocolConstants.authService, identifier: identifier)
             transport.discoverCharacteristics([HHJProtocolConstants.locationWrite], serviceUUID: HHJProtocolConstants.dataService, identifier: identifier)
@@ -328,6 +328,6 @@ final class HHJBluetoothController: ObservableObject {
 
     enum ControllerError: LocalizedError {
         case notReady
-        var errorDescription: String? { "HHJ 尾插尚未认证就绪" }
+        var errorDescription: String? { "设备尚未认证就绪" }
     }
 }
