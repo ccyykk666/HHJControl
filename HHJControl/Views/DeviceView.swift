@@ -92,7 +92,6 @@ struct DeviceView: View {
             .padding(20)
         }
         .fixedSize(horizontal: false, vertical: true)
-        .background(Color(uiColor: .systemGroupedBackground))
         .onGeometryChange(for: CGFloat.self) { proxy in
             proxy.size.height
         } action: { height in
