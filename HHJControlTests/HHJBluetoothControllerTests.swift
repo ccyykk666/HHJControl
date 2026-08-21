@@ -71,8 +71,7 @@ final class HHJBluetoothControllerTests: XCTestCase {
         )
         let id = discover(controller: controller, transport: transport)
         transport.send(.notificationState(id, characteristic: HHJProtocolConstants.authNotify, enabled: true, error: nil))
-        await Task.yield()
-        await Task.yield()
+        try? await Task.sleep(for: .milliseconds(50))
         XCTAssertFalse(controller.canSendLocation)
         if case .failed(let message) = controller.state { XCTAssertTrue(message.contains("认证超时")) }
         else { XCTFail("Expected authentication timeout") }

@@ -1,5 +1,6 @@
 import XCTest
 
+@MainActor
 final class HHJControlUITests: XCTestCase {
     private var app: XCUIApplication!
 
@@ -44,7 +45,7 @@ final class HHJControlUITests: XCTestCase {
         XCTAssertTrue(app.alerts["HHJControl"].waitForExistence(timeout: 5))
         app.alerts["HHJControl"].buttons["好"].tap()
         app.tabBars.buttons["收藏"].tap()
-        XCTAssertTrue(app.staticTexts["拖动地图或搜索地点"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["23.129100, 113.264400 · 69.8 m"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["location.send"].exists)
     }
 }
