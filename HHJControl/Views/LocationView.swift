@@ -11,6 +11,8 @@ struct LocationView: View {
             ZStack {
                 HHJMapView(selection: $model.selection, mapRequestID: model.mapRequestID) { coordinate, source in
                     model.select(coordinate, source: source, moveMap: false)
+                } onRegionChange: { region in
+                    model.updateSearchRegion(region)
                 }
                 .ignoresSafeArea()
 

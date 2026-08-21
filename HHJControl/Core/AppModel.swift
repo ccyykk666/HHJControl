@@ -12,6 +12,11 @@ final class AppModel: ObservableObject {
     @Published var administrativeArea = "正在获取区域…"
     @Published var mapRequestID = UUID()
     @Published var notice: String?
+    private(set) var searchRegion = MKCoordinateRegion(
+        center: .init(latitude: 23.1291, longitude: 113.2644),
+        latitudinalMeters: 50_000,
+        longitudinalMeters: 50_000
+    )
 
     let bluetooth: HHJBluetoothController
     let store: AppDataStore
@@ -45,6 +50,33 @@ final class AppModel: ObservableObject {
         administrativeArea = "正在获取区域…"
         if moveMap { mapRequestID = UUID() }
         resolveAddress(for: coordinate, updateName: address == nil)
+    }
+
+    func select(_ item: MKMapItem, title: String? = nil, regionFallback: String? = nil) {
+        reverseGeocodingTask?.cancel()
+        reverseGeocodingRequest?.cancel()
+        reverseGeocodingID = UUID()
+
+        let coordinate = item.location.coordinate
+        selection = LocationSelection(
+            mapCoordinate: coordinate,
+            altitude: selection.altitude,
+            address: title?.nilIfEmpty
+                ?? item.name?.nilIfEmpty
+                ?? item.address?.shortAddress?.nilIfEmpty
+                ?? "已选择的位置",
+            source: .search
+        )
+        let regionCode = item.addressRepresentations?.region?.identifier ?? item.placemark.isoCountryCode
+        let fallback = regionCode?.uppercased() == "CN" ? nil : regionFallback?.nilIfEmpty
+        administrativeArea = administrativeArea(for: item)
+            ?? fallback
+            ?? "区域信息不可用"
+        mapRequestID = UUID()
+    }
+
+    func updateSearchRegion(_ region: MKCoordinateRegion) {
+        searchRegion = region
     }
 
     func load(_ value: LocationSelection) {

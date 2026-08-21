@@ -5,6 +5,7 @@ struct HHJMapView: UIViewRepresentable {
     @Binding var selection: LocationSelection
     var mapRequestID: UUID
     var onSelect: (CLLocationCoordinate2D, LocationSelection.Source) -> Void
+    var onRegionChange: (MKCoordinateRegion) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
 
@@ -57,6 +58,7 @@ struct HHJMapView: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+            parent.onRegionChange(mapView.region)
             if programmaticMove { programmaticMove = false; return }
             parent.onSelect(mapView.centerCoordinate, .map)
         }
