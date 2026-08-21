@@ -51,7 +51,7 @@ struct HHJMapView: UIViewRepresentable {
                   location.horizontalAccuracy >= 0 else { return }
             centerOnNextUserLocation = false
             programmaticMove = true
-            mapView.setCenter(location.coordinate, animated: true)
+            mapView.setRegion(.init(center: location.coordinate, latitudinalMeters: 1_000, longitudinalMeters: 1_000), animated: true)
             parent.onSelect(location.coordinate, .currentLocation)
         }
 
@@ -63,10 +63,10 @@ struct HHJMapView: UIViewRepresentable {
         func centerOnUserLocation(in mapView: MKMapView, fallback: CLLocationCoordinate2D) {
             if let location = mapView.userLocation.location, location.horizontalAccuracy >= 0 {
                 centerOnNextUserLocation = false
-                mapView.setCenter(location.coordinate, animated: true)
+                mapView.setRegion(.init(center: location.coordinate, latitudinalMeters: 1_000, longitudinalMeters: 1_000), animated: true)
                 parent.onSelect(location.coordinate, .currentLocation)
             } else {
-                mapView.setCenter(fallback, animated: true)
+                mapView.setRegion(.init(center: fallback, latitudinalMeters: 1_000, longitudinalMeters: 1_000), animated: true)
             }
         }
 
