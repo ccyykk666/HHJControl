@@ -124,8 +124,8 @@ struct AdvancedView: View {
         NavigationStack {
             Form {
                 Section("手动定位") {
-                    LabeledContent("纬度", value: String(format: "%.6f", model.selection.mapLatitude))
-                    LabeledContent("经度", value: String(format: "%.6f", model.selection.mapLongitude))
+                    LabeledContent("纬度", value: String(format: "%.6f", model.selection.wgs84Latitude))
+                    LabeledContent("经度", value: String(format: "%.6f", model.selection.wgs84Longitude))
                     LabeledContent("海拔", value: String(format: "%.1f m", model.selection.altitude))
                     Button("设置经纬度与海拔") { showEditor = true }
                 }
@@ -150,7 +150,10 @@ struct AdvancedView: View {
             }
             .navigationTitle("高级")
             .sheet(isPresented: $showEditor) {
-                CoordinateEditorView(selection: $model.selection) {
+                CoordinateEditorView(
+                    selection: $model.selection,
+                    mapCoordinateReference: model.mapCoordinateReference
+                ) {
                     model.refreshSelectionDetails()
                     model.mapRequestID = UUID()
                     model.selectedTab = .location

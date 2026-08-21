@@ -29,7 +29,7 @@ enum HHJPacketEncoder {
     }
 
     static func locationPayload(selection: LocationSelection, date: Date) throws -> Data {
-        guard (-90...90).contains(selection.mapLatitude), (-180...180).contains(selection.mapLongitude) else {
+        guard (-90...90).contains(selection.wgs84Latitude), (-180...180).contains(selection.wgs84Longitude) else {
             throw HHJPacketError.invalidCoordinate
         }
         guard (-500...9000).contains(selection.altitude) else { throw HHJPacketError.invalidAltitude }
@@ -44,10 +44,10 @@ enum HHJPacketEncoder {
 
         let time = timeFormatter.string(from: date) + ".0"
         let day = dateFormatter.string(from: date)
-        let latitude = degreeMinutes(selection.mapLatitude)
-        let longitude = degreeMinutes(selection.mapLongitude)
-        let northSouth = selection.mapLatitude >= 0 ? "N" : "S"
-        let eastWest = selection.mapLongitude >= 0 ? "E" : "W"
+        let latitude = degreeMinutes(selection.wgs84Latitude)
+        let longitude = degreeMinutes(selection.wgs84Longitude)
+        let northSouth = selection.wgs84Latitude >= 0 ? "N" : "S"
+        let eastWest = selection.wgs84Longitude >= 0 ? "E" : "W"
         let altitude = String(format: "%.1f", selection.altitude)
 
         let gga = "$GPGGA,\(time),\(latitude),\(northSouth),\(longitude),\(eastWest),1,,09,0.6,\(altitude),M,-27.0,M,,"
@@ -70,4 +70,59 @@ enum CoordinateConverter {
         (72.004...137.8347).contains(coordinate.longitude) && (0.8293...55.8271).contains(coordinate.latitude)
     }
 
+    static func wgs84ToGCJ02(_ coordinate: CLLocationCoordinate2D) -> CLLocationCoordinate2D {
+        guard isInChina(coordinate) else { return coordinate }
+        let delta = transform(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        return .init(latitude: coordinate.latitude + delta.latitude, longitude: coordinate.longitude + delta.longitude)
+    }
+
+    static func gcj02ToWGS84(_ coordinate: CLLocationCoordinate2D) -> CLLocationCoordinate2D {
+        guard isInChina(coordinate) else { return coordinate }
+
+        var estimate = coordinate
+        for _ in 0..<6 {
+            let projected = wgs84ToGCJ02(estimate)
+            let latitudeError = projected.latitude - coordinate.latitude
+            let longitudeError = projected.longitude - coordinate.longitude
+            estimate.latitude -= latitudeError
+            estimate.longitude -= longitudeError
+            if abs(latitudeError) < 0.0000001, abs(longitudeError) < 0.0000001 { break }
+        }
+        return estimate
+    }
+
+    private static func transform(latitude: Double, longitude: Double) -> CLLocationCoordinate2D {
+        let a = 6_378_245.0
+        let eccentricity = 0.00669342162296594323
+        let x = longitude - 105.0
+        let y = latitude - 35.0
+        var latitudeDelta = -100 + 2 * x + 3 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * sqrt(abs(x))
+        latitudeDelta += (20 * sin(6 * x * .pi) + 20 * sin(2 * x * .pi)) * 2 / 3
+        latitudeDelta += (20 * sin(y * .pi) + 40 * sin(y / 3 * .pi)) * 2 / 3
+        latitudeDelta += (160 * sin(y / 12 * .pi) + 320 * sin(y * .pi / 30)) * 2 / 3
+        var longitudeDelta = 300 + x + 2 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * sqrt(abs(x))
+        longitudeDelta += (20 * sin(6 * x * .pi) + 20 * sin(2 * x * .pi)) * 2 / 3
+        longitudeDelta += (20 * sin(x * .pi) + 40 * sin(x / 3 * .pi)) * 2 / 3
+        longitudeDelta += (150 * sin(x / 12 * .pi) + 300 * sin(x / 30 * .pi)) * 2 / 3
+        let radians = latitude / 180 * .pi
+        var magic = sin(radians)
+        magic = 1 - eccentricity * magic * magic
+        let sqrtMagic = sqrt(magic)
+        latitudeDelta = latitudeDelta * 180 / ((a * (1 - eccentricity)) / (magic * sqrtMagic) * .pi)
+        longitudeDelta = longitudeDelta * 180 / (a / sqrtMagic * cos(radians) * .pi)
+        return .init(latitude: latitudeDelta, longitude: longitudeDelta)
+    }
+}
+
+enum MapCoordinateReference: String, Codable, Sendable {
+    case wgs84
+    case gcj02
+
+    func displayCoordinate(forWGS84 coordinate: CLLocationCoordinate2D) -> CLLocationCoordinate2D {
+        self == .gcj02 ? CoordinateConverter.wgs84ToGCJ02(coordinate) : coordinate
+    }
+
+    func wgs84Coordinate(forDisplay coordinate: CLLocationCoordinate2D) -> CLLocationCoordinate2D {
+        self == .gcj02 ? CoordinateConverter.gcj02ToWGS84(coordinate) : coordinate
+    }
 }

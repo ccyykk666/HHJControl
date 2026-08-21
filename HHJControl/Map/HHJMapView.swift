@@ -6,6 +6,7 @@ struct HHJMapView: UIViewRepresentable {
     var mapRequestID: UUID
     var onSelect: (CLLocationCoordinate2D, LocationSelection.Source) -> Void
     var onRegionChange: (MKCoordinateRegion) -> Void
+    var onUserLocationUpdate: (CLLocation) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
 
@@ -21,7 +22,6 @@ struct HHJMapView: UIViewRepresentable {
         map.addGestureRecognizer(press)
         map.setRegion(.init(center: selection.mapCoordinate, latitudinalMeters: 1_000, longitudinalMeters: 1_000), animated: false)
         context.coordinator.lastRequestID = mapRequestID
-        context.coordinator.centerOnNextUserLocation = selection.source == .currentLocation
         return map
     }
 
@@ -31,10 +31,8 @@ struct HHJMapView: UIViewRepresentable {
             context.coordinator.lastRequestID = mapRequestID
             context.coordinator.programmaticMove = true
             if selection.source == .currentLocation {
-                context.coordinator.centerOnNextUserLocation = true
-                context.coordinator.centerOnUserLocation(in: map, fallback: selection.mapCoordinate)
+                map.setRegion(.init(center: selection.mapCoordinate, latitudinalMeters: 1_000, longitudinalMeters: 1_000), animated: true)
             } else {
-                context.coordinator.centerOnNextUserLocation = false
                 map.setCenter(selection.mapCoordinate, animated: true)
             }
         }
@@ -44,33 +42,17 @@ struct HHJMapView: UIViewRepresentable {
         var parent: HHJMapView
         var lastRequestID: UUID?
         var programmaticMove = false
-        var centerOnNextUserLocation = false
         init(parent: HHJMapView) { self.parent = parent }
 
         func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
-            guard centerOnNextUserLocation,
-                  let location = userLocation.location,
-                  location.horizontalAccuracy >= 0 else { return }
-            centerOnNextUserLocation = false
-            programmaticMove = true
-            mapView.setRegion(.init(center: location.coordinate, latitudinalMeters: 1_000, longitudinalMeters: 1_000), animated: true)
-            parent.onSelect(location.coordinate, .currentLocation)
+            guard let location = userLocation.location, location.horizontalAccuracy >= 0 else { return }
+            parent.onUserLocationUpdate(location)
         }
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
             parent.onRegionChange(mapView.region)
             if programmaticMove { programmaticMove = false; return }
             parent.onSelect(mapView.centerCoordinate, .map)
-        }
-
-        func centerOnUserLocation(in mapView: MKMapView, fallback: CLLocationCoordinate2D) {
-            if let location = mapView.userLocation.location, location.horizontalAccuracy >= 0 {
-                centerOnNextUserLocation = false
-                mapView.setRegion(.init(center: location.coordinate, latitudinalMeters: 1_000, longitudinalMeters: 1_000), animated: true)
-                parent.onSelect(location.coordinate, .currentLocation)
-            } else {
-                mapView.setRegion(.init(center: fallback, latitudinalMeters: 1_000, longitudinalMeters: 1_000), animated: true)
-            }
         }
 
         @objc func longPressed(_ recognizer: UILongPressGestureRecognizer) {
@@ -80,5 +62,6 @@ struct HHJMapView: UIViewRepresentable {
             map.setCenter(coordinate, animated: true)
             parent.onSelect(coordinate, .longPress)
         }
+
     }
 }

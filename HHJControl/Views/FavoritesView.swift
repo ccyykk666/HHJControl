@@ -60,7 +60,7 @@ private struct PlaceRow: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title).foregroundStyle(.primary)
-                Text(String(format: "%.6f, %.6f · %.1f m", selection.mapLatitude, selection.mapLongitude, selection.altitude))
+                Text(String(format: "%.6f, %.6f · %.1f m", selection.wgs84Latitude, selection.wgs84Longitude, selection.altitude))
                     .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
             }
             Spacer()

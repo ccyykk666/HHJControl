@@ -19,6 +19,8 @@ struct LocationView: View {
                     model.select(coordinate, source: source, moveMap: false)
                 } onRegionChange: { region in
                     model.updateSearchRegion(region)
+                } onUserLocationUpdate: { location in
+                    model.observeMapUserLocation(location)
                 }
                 .ignoresSafeArea()
 

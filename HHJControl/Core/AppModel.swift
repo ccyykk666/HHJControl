@@ -8,10 +8,18 @@ final class AppModel: ObservableObject {
     enum Tab: Hashable { case location, favorites, advanced, search }
 
     @Published var selectedTab: Tab = .location
-    @Published var selection = LocationSelection(mapCoordinate: .init(latitude: 23.1291, longitude: 113.2644), address: "拖动地图或搜索地点")
+    @Published var selection: LocationSelection = {
+        let wgs84 = CLLocationCoordinate2D(latitude: 23.1291, longitude: 113.2644)
+        return LocationSelection(
+            mapCoordinate: CoordinateConverter.wgs84ToGCJ02(wgs84),
+            wgs84Coordinate: wgs84,
+            address: "拖动地图或搜索地点"
+        )
+    }()
     @Published var administrativeArea = "正在获取区域…"
     @Published var mapRequestID = UUID()
     @Published var notice: String?
+    @Published private(set) var mapCoordinateReference: MapCoordinateReference = .gcj02
     @Published private(set) var searchRegion = MKCoordinateRegion(
         center: .init(latitude: 23.1291, longitude: 113.2644),
         latitudinalMeters: 50_000,
@@ -47,10 +55,17 @@ final class AppModel: ObservableObject {
         source: LocationSelection.Source,
         moveMap: Bool = true
     ) {
-        selection = LocationSelection(mapCoordinate: coordinate, altitude: altitude ?? selection.altitude, address: address ?? "正在获取地址…", source: source)
+        let wgs84 = mapCoordinateReference.wgs84Coordinate(forDisplay: coordinate)
+        selection = LocationSelection(
+            mapCoordinate: coordinate,
+            wgs84Coordinate: wgs84,
+            altitude: altitude ?? selection.altitude,
+            address: address ?? "正在获取地址…",
+            source: source
+        )
         administrativeArea = "正在获取区域…"
         if moveMap { mapRequestID = UUID() }
-        resolveAddress(for: coordinate, updateName: address == nil)
+        resolveAddress(for: coordinate, wgs84Coordinate: wgs84, updateName: address == nil)
     }
 
     func select(_ item: MKMapItem, title: String? = nil, regionFallback: String? = nil) {
@@ -59,8 +74,10 @@ final class AppModel: ObservableObject {
         reverseGeocodingID = UUID()
 
         let coordinate = item.location.coordinate
+        let wgs84 = mapCoordinateReference.wgs84Coordinate(forDisplay: coordinate)
         selection = LocationSelection(
             mapCoordinate: coordinate,
+            wgs84Coordinate: wgs84,
             altitude: selection.altitude,
             address: title?.nilIfEmpty
                 ?? item.name?.nilIfEmpty
@@ -84,8 +101,10 @@ final class AppModel: ObservableObject {
         reverseGeocodingTask?.cancel()
         reverseGeocodingRequest?.cancel()
         reverseGeocodingID = UUID()
+        let mapCoordinate = mapCoordinateReference.displayCoordinate(forWGS84: coordinate)
         selection = LocationSelection(
-            mapCoordinate: coordinate,
+            mapCoordinate: mapCoordinate,
+            wgs84Coordinate: coordinate,
             altitude: selection.altitude,
             address: title,
             source: .search
@@ -99,16 +118,18 @@ final class AppModel: ObservableObject {
     }
 
     func load(_ value: LocationSelection) {
-        selection = value
+        var projected = value
+        projected.updateMapCoordinate(mapCoordinateReference.displayCoordinate(forWGS84: value.wgs84Coordinate))
+        selection = projected
         administrativeArea = "正在获取区域…"
         selectedTab = .location
         mapRequestID = UUID()
-        resolveAddress(for: value.mapCoordinate, updateName: false)
+        resolveAddress(for: projected.mapCoordinate, wgs84Coordinate: projected.wgs84Coordinate, updateName: false)
     }
 
     func refreshSelectionDetails() {
         administrativeArea = "正在获取区域…"
-        resolveAddress(for: selection.mapCoordinate, updateName: false)
+        resolveAddress(for: selection.mapCoordinate, wgs84Coordinate: selection.wgs84Coordinate, updateName: false)
     }
 
     func useCurrentLocation(reportFailure: Bool = true) {
@@ -116,11 +137,27 @@ final class AppModel: ObservableObject {
             guard let self else { return }
             switch result {
             case .success(let location):
-                self.select(location.coordinate, altitude: location.altitude.isFinite ? location.altitude : self.selection.altitude, source: .currentLocation)
+                self.selectWGS84(
+                    location.coordinate,
+                    altitude: location.altitude.isFinite ? location.altitude : self.selection.altitude,
+                    source: .currentLocation
+                )
             case .failure(let error):
                 if reportFailure { self.notice = error.localizedDescription }
             }
         }
+    }
+
+    func observeMapUserLocation(_ location: CLLocation) {
+        guard location.horizontalAccuracy >= 0 else { return }
+        let reference: MapCoordinateReference = CoordinateConverter.isInChina(location.coordinate) ? .gcj02 : .wgs84
+        guard reference != mapCoordinateReference else { return }
+
+        mapCoordinateReference = reference
+        var projected = selection
+        projected.updateMapCoordinate(reference.displayCoordinate(forWGS84: selection.wgs84Coordinate))
+        selection = projected
+        mapRequestID = UUID()
     }
 
     @discardableResult
@@ -137,7 +174,29 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func resolveAddress(for coordinate: CLLocationCoordinate2D, updateName: Bool) {
+    private func selectWGS84(
+        _ coordinate: CLLocationCoordinate2D,
+        altitude: Double,
+        source: LocationSelection.Source
+    ) {
+        let mapCoordinate = mapCoordinateReference.displayCoordinate(forWGS84: coordinate)
+        selection = LocationSelection(
+            mapCoordinate: mapCoordinate,
+            wgs84Coordinate: coordinate,
+            altitude: altitude,
+            address: "正在获取地址…",
+            source: source
+        )
+        administrativeArea = "正在获取区域…"
+        mapRequestID = UUID()
+        resolveAddress(for: mapCoordinate, wgs84Coordinate: coordinate, updateName: true)
+    }
+
+    private func resolveAddress(
+        for coordinate: CLLocationCoordinate2D,
+        wgs84Coordinate: CLLocationCoordinate2D,
+        updateName: Bool
+    ) {
         reverseGeocodingTask?.cancel()
         reverseGeocodingRequest?.cancel()
         let requestID = UUID()
@@ -149,9 +208,9 @@ final class AppModel: ObservableObject {
                   let self,
                   self.isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate) else { return }
 
-            if !CoordinateConverter.isInChina(coordinate) {
+            if !CoordinateConverter.isInChina(wgs84Coordinate) {
                 do {
-                    let place = try await self.geoapify.reverse(coordinate)
+                    let place = try await self.geoapify.reverse(wgs84Coordinate)
                     guard !Task.isCancelled,
                           self.isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate) else { return }
                     if updateName { self.selection.address = place.title }

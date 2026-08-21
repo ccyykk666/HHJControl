@@ -1,8 +1,10 @@
+import CoreLocation
 import SwiftUI
 
 struct CoordinateEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var selection: LocationSelection
+    var mapCoordinateReference: MapCoordinateReference
     var onSave: () -> Void
     @State private var latitude = ""
     @State private var longitude = ""
@@ -25,8 +27,8 @@ struct CoordinateEditorView: View {
                 ToolbarItem(placement: .confirmationAction) { Button("保存", action: save) }
             }
             .onAppear {
-                latitude = String(format: "%.6f", selection.mapLatitude)
-                longitude = String(format: "%.6f", selection.mapLongitude)
+                latitude = String(format: "%.6f", selection.wgs84Latitude)
+                longitude = String(format: "%.6f", selection.wgs84Longitude)
                 altitude = String(format: "%.1f", selection.altitude)
             }
         }
@@ -35,7 +37,14 @@ struct CoordinateEditorView: View {
     private func save() {
         guard let lat = Double(latitude), (-90...90).contains(lat), let lon = Double(longitude), (-180...180).contains(lon) else { error = "请输入有效经纬度"; return }
         guard let alt = Double(altitude), (-500...9000).contains(alt) else { error = "海拔必须在 -500 到 9000 米之间"; return }
-        selection = LocationSelection(mapCoordinate: .init(latitude: lat, longitude: lon), altitude: alt, address: "手动坐标", source: .manual)
+        let wgs84 = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+        selection = LocationSelection(
+            mapCoordinate: mapCoordinateReference.displayCoordinate(forWGS84: wgs84),
+            wgs84Coordinate: wgs84,
+            altitude: alt,
+            address: "手动坐标",
+            source: .manual
+        )
         onSave(); dismiss()
     }
 }

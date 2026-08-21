@@ -74,8 +74,8 @@ final class AppDataStore: ObservableObject {
     }
 
     private func sameLocation(_ lhs: LocationSelection, _ rhs: LocationSelection) -> Bool {
-        abs(lhs.mapLatitude - rhs.mapLatitude) < 0.00001
-            && abs(lhs.mapLongitude - rhs.mapLongitude) < 0.00001
+        abs(lhs.wgs84Latitude - rhs.wgs84Latitude) < 0.00001
+            && abs(lhs.wgs84Longitude - rhs.wgs84Longitude) < 0.00001
     }
 }
 
