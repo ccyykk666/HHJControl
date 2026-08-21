@@ -116,7 +116,7 @@ struct LocationView: View {
                             .frame(maxWidth: .infinity)
                             .font(.headline)
                         }
-                        .buttonStyle(.borderedProminent).controlSize(.large)
+                        .buttonStyle(.glassProminent).controlSize(.large)
                         .disabled(!bluetooth.canSendLocation || !model.selection.isValid)
                         .animation(.easeInOut(duration: 0.2), value: sendButtonState)
                     }
