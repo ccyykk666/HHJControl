@@ -94,7 +94,11 @@ struct DeviceView: View {
         .presentationDetents([.height(presentationHeight)])
         .onAppear(perform: beginScanningIfNeeded)
         .onChange(of: bluetooth.state) { _, state in
-            if state == .ready { dismiss() }
+            guard state == .ready else { return }
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(1_500))
+                if bluetooth.state == .ready { dismiss() }
+            }
         }
     }
 
