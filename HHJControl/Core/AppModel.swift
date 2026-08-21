@@ -17,6 +17,8 @@ final class AppModel: ObservableObject {
     let store: AppDataStore
     let locationProvider: DeviceLocationProvider
     private var reverseGeocodingRequest: MKReverseGeocodingRequest?
+    private var reverseGeocodingTask: Task<Void, Never>?
+    private var reverseGeocodingID = UUID()
     private var didPrepareForLaunch = false
 
     init(bluetooth: HHJBluetoothController? = nil, store: AppDataStore? = nil) {
@@ -83,18 +85,26 @@ final class AppModel: ObservableObject {
     }
 
     private func resolveAddress(for coordinate: CLLocationCoordinate2D, updateName: Bool) {
+        reverseGeocodingTask?.cancel()
         reverseGeocodingRequest?.cancel()
-        guard let request = MKReverseGeocodingRequest(location: .init(latitude: coordinate.latitude, longitude: coordinate.longitude)) else {
-            if updateName { selection.address = "已选择的位置" }
-            administrativeArea = "区域信息不可用"
-            return
-        }
-        reverseGeocodingRequest = request
-        Task { [weak self] in
+        let requestID = UUID()
+        reverseGeocodingID = requestID
+
+        reverseGeocodingTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled,
+                  let self,
+                  self.isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate) else { return }
+
+            guard let request = MKReverseGeocodingRequest(location: .init(latitude: coordinate.latitude, longitude: coordinate.longitude)) else {
+                if updateName { self.selection.address = "已选择的位置" }
+                self.administrativeArea = "区域信息不可用"
+                return
+            }
+            self.reverseGeocodingRequest = request
             let item = try? await request.mapItems.first
-            guard let self,
-                  self.selection.mapCoordinate.latitude == coordinate.latitude,
-                  self.selection.mapCoordinate.longitude == coordinate.longitude else { return }
+            guard !Task.isCancelled,
+                  self.isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate) else { return }
             if updateName {
                 self.selection.address = item?.name?.nilIfEmpty
                     ?? item?.address?.shortAddress?.nilIfEmpty
@@ -103,6 +113,12 @@ final class AppModel: ObservableObject {
             }
             self.administrativeArea = item.flatMap(self.administrativeArea(for:)) ?? "区域信息不可用"
         }
+    }
+
+    private func isCurrentReverseGeocodingRequest(_ requestID: UUID, coordinate: CLLocationCoordinate2D) -> Bool {
+        reverseGeocodingID == requestID
+            && selection.mapCoordinate.latitude == coordinate.latitude
+            && selection.mapCoordinate.longitude == coordinate.longitude
     }
 
     private func administrativeArea(for item: MKMapItem) -> String? {
