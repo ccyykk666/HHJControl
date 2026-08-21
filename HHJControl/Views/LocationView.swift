@@ -85,6 +85,7 @@ struct LocationView: View {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             } label: {
                                 Image(systemName: store.isFavorite(model.selection) ? "star.fill" : "star")
+                                    .font(.title3)
                                     .foregroundStyle(store.isFavorite(model.selection) ? .orange : .primary)
                             }
                             .frame(width: 44, height: 44)

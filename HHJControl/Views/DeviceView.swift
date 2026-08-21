@@ -56,7 +56,9 @@ struct DeviceView: View {
 
                     if bluetooth.devices.isEmpty {
                         HStack {
-                            ProgressView().opacity(bluetooth.state == .scanning ? 1 : 0)
+                            if bluetooth.state == .scanning {
+                                ProgressView()
+                            }
                             Text(bluetooth.state == .scanning ? "正在查找设备…" : "暂未发现设备")
                                 .foregroundStyle(.secondary)
                         }
@@ -134,7 +136,7 @@ struct AdvancedView: View {
                 Section("当前位置") {
                     LabeledContent("纬度", value: String(format: "%.6f", model.selection.wgs84Latitude))
                     LabeledContent("经度", value: String(format: "%.6f", model.selection.wgs84Longitude))
-                    LabeledContent("海拔", value: String(format: "%.1f m", model.selection.altitude))
+                    LabeledContent("海拔", value: String(format: "%.1f", model.selection.altitude))
                     Button("手动设置") { showEditor = true }
                 }
 
