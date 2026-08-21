@@ -42,12 +42,12 @@ final class HHJBluetoothController: ObservableObject {
     private var locationCharacteristicFound = false
     private var authenticated = false
     private var manualDisconnect = false
-    private var isForeground = true
     private var reconnectAttempt = 0
     private var authenticationToken = UUID()
     private var availability: BluetoothAvailability = .unknown
     private var authWriteReady = false
     private var authNotifyReady = false
+    private var locationStreamingTask: Task<Void, Never>?
 
     init(
         transport: BluetoothTransport,
@@ -114,6 +114,7 @@ final class HHJBluetoothController: ObservableObject {
 
     func disconnect() {
         manualDisconnect = true
+        stopLocationStreaming()
         authenticationToken = UUID()
         if let activeIdentifier { transport.disconnect(identifier: activeIdentifier) }
         resetSession(keepingIdentifier: false)
@@ -137,14 +138,46 @@ final class HHJBluetoothController: ObservableObject {
     }
 
     func sendLocation(_ selection: LocationSelection, date: Date = Date()) throws {
+        try writeLocation(selection, date: date, logSubmission: true)
+    }
+
+    private func writeLocation(_ selection: LocationSelection, date: Date, logSubmission: Bool) throws {
         guard canSendLocation, let identifier = activeIdentifier else { throw ControllerError.notReady }
         let payload = try HHJPacketEncoder.locationPayload(selection: selection, date: date)
         try transport.write(payload, characteristicUUID: HHJProtocolConstants.locationWrite, withResponse: false, identifier: identifier)
-        log(.info, "定位指令 \(payload.count) 字节已进入发送流程 → 32E1")
+        if logSubmission {
+            log(.info, "定位指令 \(payload.count) 字节已进入发送流程 → 32E1")
+        }
+    }
+
+    func startLocationStreaming(_ selection: LocationSelection) throws {
+        locationStreamingTask?.cancel()
+        try sendLocation(selection)
+        log(.success, "已开始持续发送定位数据")
+        locationStreamingTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: .seconds(1))
+                } catch {
+                    return
+                }
+                guard let self else { return }
+                guard self.canSendLocation else { continue }
+                do {
+                    try self.writeLocation(selection, date: Date(), logSubmission: false)
+                } catch {
+                    self.log(.warning, "持续发送暂未完成：\(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    private func stopLocationStreaming() {
+        locationStreamingTask?.cancel()
+        locationStreamingTask = nil
     }
 
     func setForeground(_ value: Bool) {
-        isForeground = value
         if value, activeIdentifier == nil, let raw = defaults.string(forKey: "lastPeripheralIdentifier"), let identifier = UUID(uuidString: raw), !manualDisconnect {
             reconnectAttempt = 0
             scheduleReconnect(identifier)
@@ -231,9 +264,8 @@ final class HHJBluetoothController: ObservableObject {
                 state = .ready
                 log(.success, "认证成功；定位发送已启用")
             }
-        case .writeSubmitted(let identifier, let characteristic):
+        case .writeSubmitted(let identifier, _):
             guard identifier == activeIdentifier else { return }
-            log(.info, "写入 \(shortUUID(characteristic)) 已提交给蓝牙系统（无响应）")
         case .writeCompleted(let identifier, let characteristic, let error):
             guard identifier == activeIdentifier else { return }
             if let error { fail("写入 \(shortUUID(characteristic)) 失败：\(error)") }
@@ -274,7 +306,7 @@ final class HHJBluetoothController: ObservableObject {
 
     private func reconnectOrFail(_ identifier: UUID) {
         resetSession(keepingIdentifier: true)
-        guard isForeground, !manualDisconnect, reconnectAttempt < 5 else {
+        guard !manualDisconnect, reconnectAttempt < 5 else {
             fail(reconnectAttempt >= 5 ? "自动重连已达到 5 次" : "连接已断开")
             return
         }
@@ -289,7 +321,7 @@ final class HHJBluetoothController: ObservableObject {
         state = .reconnecting(attempt: reconnectAttempt)
         log(.info, "将在 \(delay) 秒后重连")
         reconnectScheduler(duration) { [weak self] in
-            guard let self, self.isForeground, !self.manualDisconnect, self.activeIdentifier == identifier else { return }
+            guard let self, !self.manualDisconnect, self.activeIdentifier == identifier else { return }
             self.state = .connecting
             self.transport.connect(identifier: identifier)
         }

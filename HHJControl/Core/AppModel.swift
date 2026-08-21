@@ -128,8 +128,8 @@ final class AppModel: ObservableObject {
         let value = selection
         do {
             guard value.isValid else { throw HHJPacketError.invalidAltitude }
-            try bluetooth.sendLocation(value)
-            store.addRecord(.init(selection: value, result: .success, message: "已提交发送"))
+            try bluetooth.startLocationStreaming(value)
+            store.addRecord(.init(selection: value, result: .success, message: "持续发送已启动"))
             return true
         } catch {
             store.addRecord(.init(selection: value, result: .failure, message: error.localizedDescription))
