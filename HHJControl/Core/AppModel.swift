@@ -12,7 +12,7 @@ final class AppModel: ObservableObject {
     @Published var administrativeArea = "正在获取区域…"
     @Published var mapRequestID = UUID()
     @Published var notice: String?
-    private(set) var searchRegion = MKCoordinateRegion(
+    @Published private(set) var searchRegion = MKCoordinateRegion(
         center: .init(latitude: 23.1291, longitude: 113.2644),
         latitudinalMeters: 50_000,
         longitudinalMeters: 50_000
