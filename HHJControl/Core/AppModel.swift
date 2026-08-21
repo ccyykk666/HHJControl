@@ -126,8 +126,7 @@ final class AppModel: ObservableObject {
         let placemark: CLPlacemark?
         do {
             let placemarks = try await geocoder.reverseGeocodeLocation(
-                CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude),
-                preferredLocale: .autoupdatingCurrent
+                CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
             )
             placemark = placemarks.first
             logGeocoding(.info, "系统地址服务返回 \(placemarks.count) 个地点")
