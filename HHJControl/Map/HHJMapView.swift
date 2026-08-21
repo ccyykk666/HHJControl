@@ -18,7 +18,7 @@ struct HHJMapView: UIViewRepresentable {
         let press = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.longPressed(_:)))
         press.minimumPressDuration = 0.45
         map.addGestureRecognizer(press)
-        map.setRegion(.init(center: selection.mapCoordinate, latitudinalMeters: 3_000, longitudinalMeters: 3_000), animated: false)
+        map.setRegion(.init(center: selection.mapCoordinate, latitudinalMeters: 1_000, longitudinalMeters: 1_000), animated: false)
         context.coordinator.lastRequestID = mapRequestID
         return map
     }
