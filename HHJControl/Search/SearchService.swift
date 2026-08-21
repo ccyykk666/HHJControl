@@ -25,7 +25,7 @@ final class SearchService: NSObject, ObservableObject, @preconcurrency MKLocalSe
                 completionHandler(.failure(NSError(domain: "HHJSearch", code: 404, userInfo: [NSLocalizedDescriptionKey: "未找到该地点"])))
                 return
             }
-            let title = [item.name, completion.subtitle].filter { !$0.isEmpty }.joined(separator: " · ")
+            let title = [item.name, Optional(completion.subtitle)].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
             completionHandler(.success((item.location.coordinate, title)))
         }
     }

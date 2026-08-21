@@ -1,5 +1,6 @@
 import CoreLocation
 import Foundation
+import MapKit
 import SwiftUI
 
 @MainActor
@@ -14,6 +15,7 @@ final class AppModel: ObservableObject {
     let bluetooth: HHJBluetoothController
     let store: AppDataStore
     let locationProvider: DeviceLocationProvider
+    private var reverseGeocodingRequest: MKReverseGeocodingRequest?
 
     init(bluetooth: HHJBluetoothController? = nil, store: AppDataStore? = nil) {
         self.bluetooth = bluetooth ?? HHJBluetoothController()
@@ -57,13 +59,19 @@ final class AppModel: ObservableObject {
     }
 
     private func resolveAddress(for coordinate: CLLocationCoordinate2D) {
-        CLGeocoder().reverseGeocodeLocation(.init(latitude: coordinate.latitude, longitude: coordinate.longitude)) { [weak self] placemarks, _ in
-            Task { @MainActor in
-                guard let self, self.selection.mapCoordinate.latitude == coordinate.latitude, self.selection.mapCoordinate.longitude == coordinate.longitude else { return }
-                let place = placemarks?.first
-                let parts = [place?.locality, place?.subLocality, place?.thoroughfare, place?.name].compactMap { $0 }.uniqued()
-                self.selection.address = parts.isEmpty ? "已选择的位置" : parts.joined(separator: " · ")
-            }
+        reverseGeocodingRequest?.cancel()
+        guard let request = MKReverseGeocodingRequest(location: .init(latitude: coordinate.latitude, longitude: coordinate.longitude)) else {
+            selection.address = "已选择的位置"
+            return
+        }
+        reverseGeocodingRequest = request
+        Task { [weak self] in
+            let items = try? await request.mapItems
+            let item = items?.first
+            guard let self,
+                  self.selection.mapCoordinate.latitude == coordinate.latitude,
+                  self.selection.mapCoordinate.longitude == coordinate.longitude else { return }
+            self.selection.address = item?.name?.nilIfEmpty ?? "已选择的位置"
         }
     }
 }
@@ -73,4 +81,8 @@ private extension Array where Element: Hashable {
         var seen = Set<Element>()
         return filter { seen.insert($0).inserted }
     }
+}
+
+private extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
 }

@@ -228,10 +228,11 @@ final class HHJBluetoothController: ObservableObject {
     private func scheduleReconnect(_ identifier: UUID) {
         activeIdentifier = identifier
         reconnectAttempt += 1
+        let delay = reconnectAttempt
         state = .reconnecting(attempt: reconnectAttempt)
-        log(.info, "将在 \(reconnectAttempt) 秒后重连")
+        log(.info, "将在 \(delay) 秒后重连")
         Task { [weak self] in
-            try? await Task.sleep(for: .seconds(reconnectAttempt))
+            try? await Task.sleep(for: .seconds(delay))
             guard let self, self.isForeground, !self.manualDisconnect, self.activeIdentifier == identifier else { return }
             self.state = .connecting
             self.transport.connect(identifier: identifier)

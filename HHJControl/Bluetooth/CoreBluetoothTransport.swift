@@ -109,16 +109,16 @@ extension CoreBluetoothTransport: @preconcurrency CBPeripheralDelegate {
     }
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
-        let values = service.characteristics?.map {
+        let values: [BluetoothCharacteristic] = (service.characteristics ?? []).map { characteristic in
             let value = BluetoothCharacteristic(
-                uuid: normalize($0.uuid.uuidString),
-                canWriteWithResponse: $0.properties.contains(.write),
-                canWriteWithoutResponse: $0.properties.contains(.writeWithoutResponse),
-                canNotify: $0.properties.contains(.notify) || $0.properties.contains(.indicate)
+                uuid: normalize(characteristic.uuid.uuidString),
+                canWriteWithResponse: characteristic.properties.contains(.write),
+                canWriteWithoutResponse: characteristic.properties.contains(.writeWithoutResponse),
+                canNotify: characteristic.properties.contains(.notify) || characteristic.properties.contains(.indicate)
             )
-            characteristics[peripheral.identifier, default: [:]][value.uuid] = $0
+            characteristics[peripheral.identifier, default: [:]][value.uuid] = characteristic
             return value
-        } ?? []
+        }
         eventHandler?(.characteristics(peripheral.identifier, service: normalize(service.uuid.uuidString), values: values, error: error?.localizedDescription))
     }
 
@@ -135,4 +135,3 @@ extension CoreBluetoothTransport: @preconcurrency CBPeripheralDelegate {
         eventHandler?(.writeCompleted(peripheral.identifier, characteristic: normalize(characteristic.uuid.uuidString), error: error?.localizedDescription))
     }
 }
-
