@@ -4,11 +4,20 @@ import SwiftUI
 struct SearchView: View {
     @EnvironmentObject private var model: AppModel
     @StateObject private var search = SearchService()
+    private var usesUITestFixture: Bool { ProcessInfo.processInfo.environment["UITEST_SEARCH_FIXTURE"] == "1" }
 
     var body: some View {
         NavigationStack {
             Group {
-                if search.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                if usesUITestFixture {
+                    List {
+                        Button("HHJ 测试地点") {
+                            model.select(.init(latitude: 31.2304, longitude: 121.4737), address: "HHJ 测试地点", source: .search)
+                            model.selectedTab = .location
+                        }
+                        .accessibilityIdentifier("search.fixture.result")
+                    }
+                } else if search.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     ContentUnavailableView("搜索地点", systemImage: "magnifyingglass", description: Text("输入地址、地标或商户名称。"))
                 } else if search.completions.isEmpty {
                     if let error = search.errorMessage { ContentUnavailableView("搜索失败", systemImage: "exclamationmark.magnifyingglass", description: Text(error)) }
@@ -42,4 +51,3 @@ struct SearchView: View {
         }
     }
 }
-

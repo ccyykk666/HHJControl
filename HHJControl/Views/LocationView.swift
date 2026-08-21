@@ -49,16 +49,19 @@ struct LocationView: View {
                             Spacer()
                             Button { store.addFavorite(model.selection); model.notice = "已加入收藏" } label: { Image(systemName: "star") }
                                 .buttonStyle(.glass)
+                                .accessibilityIdentifier("location.favorite")
                         }
                         HStack {
                             Label(String(format: "%.1f m", model.selection.altitude), systemImage: "mountain.2")
                             Spacer()
                             Button("编辑坐标与海拔") { showEditor = true }.font(.subheadline)
+                                .accessibilityIdentifier("location.editor")
                         }
                         Button(action: model.sendSelection) {
                             Label("设置定位", systemImage: "location.circle.fill").frame(maxWidth: .infinity).font(.headline)
                         }
                         .buttonStyle(.borderedProminent).controlSize(.large)
+                        .accessibilityIdentifier("location.send")
                         .disabled(!bluetooth.canSendLocation || !model.selection.isValid)
                         if !bluetooth.canSendLocation {
                             Button("前往设备页连接或重新认证") { model.selectedTab = .device }
@@ -75,4 +78,3 @@ struct LocationView: View {
         }
     }
 }
-

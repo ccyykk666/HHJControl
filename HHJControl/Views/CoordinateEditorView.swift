@@ -13,9 +13,9 @@ struct CoordinateEditorView: View {
         NavigationStack {
             Form {
                 Section("地图坐标") {
-                    TextField("纬度 -90...90", text: $latitude).keyboardType(.numbersAndPunctuation)
-                    TextField("经度 -180...180", text: $longitude).keyboardType(.numbersAndPunctuation)
-                    TextField("海拔 -500...9000 米", text: $altitude).keyboardType(.numbersAndPunctuation)
+                    TextField("纬度 -90...90", text: $latitude).keyboardType(.numbersAndPunctuation).accessibilityIdentifier("coordinate.latitude")
+                    TextField("经度 -180...180", text: $longitude).keyboardType(.numbersAndPunctuation).accessibilityIdentifier("coordinate.longitude")
+                    TextField("海拔 -500...9000 米", text: $altitude).keyboardType(.numbersAndPunctuation).accessibilityIdentifier("coordinate.altitude")
                     if let error { Text(error).foregroundStyle(.red) }
                 }
                 Section { Text("中国范围内的地图坐标会按原协议方向转换为 WGS‑84；境外坐标原样发送。") }
