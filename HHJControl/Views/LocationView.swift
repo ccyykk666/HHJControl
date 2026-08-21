@@ -87,9 +87,9 @@ struct LocationView: View {
                                 Image(systemName: store.isFavorite(model.selection) ? "star.fill" : "star")
                                     .foregroundStyle(store.isFavorite(model.selection) ? .orange : .primary)
                             }
-                                .buttonStyle(.glass)
-                                .accessibilityIdentifier("location.favorite")
-                                .accessibilityLabel(store.isFavorite(model.selection) ? "取消收藏" : "收藏")
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("location.favorite")
+                            .accessibilityLabel(store.isFavorite(model.selection) ? "取消收藏" : "收藏")
                         }
                         Button(action: sendLocation) {
                             HStack(spacing: 8) {
