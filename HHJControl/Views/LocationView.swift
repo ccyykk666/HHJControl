@@ -151,7 +151,7 @@ private struct MapTopBlurView: UIViewRepresentable {
 }
 
 private final class TopBlurContainerView: UIView {
-    private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemChromeMaterial))
+    private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
     private let fadeMask = CAGradientLayer()
 
     override init(frame: CGRect) {
