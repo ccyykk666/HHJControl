@@ -29,6 +29,12 @@ final class HHJBluetoothController: ObservableObject {
 
     var canSendLocation: Bool { state == .ready && locationCharacteristicFound && authenticated }
     var connectedIdentifier: UUID? { activeIdentifier }
+    var canRetryAuthentication: Bool {
+        activeIdentifier != nil &&
+        locationCharacteristicFound &&
+        characteristicsFound.contains(normalize(HHJProtocolConstants.authWrite)) &&
+        characteristicsFound.contains(normalize(HHJProtocolConstants.authNotify))
+    }
 
     private let transport: BluetoothTransport
     private let defaults: UserDefaults
@@ -124,10 +130,7 @@ final class HHJBluetoothController: ObservableObject {
     }
 
     func retryAuthentication() {
-        guard let identifier = activeIdentifier,
-              locationCharacteristicFound,
-              characteristicsFound.contains(normalize(HHJProtocolConstants.authWrite)),
-              characteristicsFound.contains(normalize(HHJProtocolConstants.authNotify)) else {
+        guard let identifier = activeIdentifier, canRetryAuthentication else {
             fail("认证特征尚未就绪")
             return
         }

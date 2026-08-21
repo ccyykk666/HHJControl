@@ -26,7 +26,7 @@ struct DeviceView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 0) {
-                VStack(alignment: .leading, spacing: 14) {
+                HStack {
                     Label(
                         bluetooth.canSendLocation ? "设备已连接" : bluetooth.state.title,
                         systemImage: bluetooth.canSendLocation ? "checkmark.seal.fill" : "antenna.radiowaves.left.and.right"
@@ -34,13 +34,12 @@ struct DeviceView: View {
                     .font(.headline)
                     .foregroundStyle(bluetooth.canSendLocation ? .green : .primary)
 
+                    Spacer()
+
                     if bluetooth.connectedIdentifier != nil {
-                        Divider()
-                        HStack {
-                            Button("断开", role: .destructive) { bluetooth.disconnect() }
-                            if !bluetooth.canSendLocation {
-                                Button("重新认证") { bluetooth.retryAuthentication() }
-                            }
+                        Button("断开", role: .destructive) { bluetooth.disconnect() }
+                        if case .failed = bluetooth.state, bluetooth.canRetryAuthentication {
+                            Button("重新认证") { bluetooth.retryAuthentication() }
                         }
                     }
                 }
@@ -51,8 +50,6 @@ struct DeviceView: View {
                         .padding(.vertical, 20)
 
                     Text("设备列表").font(.headline)
-                    Divider()
-                        .padding(.vertical, 12)
 
                     if bluetooth.devices.isEmpty {
                         HStack {
@@ -62,6 +59,7 @@ struct DeviceView: View {
                             Text(bluetooth.state == .scanning ? "正在查找设备…" : "暂未发现设备")
                                 .foregroundStyle(.secondary)
                         }
+                        .padding(.top, 16)
                     } else {
                         ScrollView {
                             LazyVStack(spacing: 0) {
@@ -83,12 +81,12 @@ struct DeviceView: View {
                             }
                         }
                         .frame(maxHeight: 280)
+                        .padding(.top, 12)
                     }
 
                     if bluetooth.state != .scanning {
-                        Divider()
-                            .padding(.top, 12)
                         Button("重新扫描") { bluetooth.startScanning() }
+                            .padding(.top, 16)
                     }
                 }
             }
@@ -119,8 +117,8 @@ struct DeviceView: View {
         guard !bluetooth.canSendLocation else { return 220 }
 
         let visibleRows = max(1, min(bluetooth.devices.count, 6))
-        let rescanControlHeight: CGFloat = bluetooth.state == .scanning ? 0 : 48
-        return min(600, 230 + CGFloat(visibleRows) * 45 + rescanControlHeight)
+        let rescanControlHeight: CGFloat = bluetooth.state == .scanning ? 0 : 36
+        return min(600, 190 + CGFloat(visibleRows) * 45 + rescanControlHeight)
     }
 }
 
