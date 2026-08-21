@@ -93,6 +93,9 @@ struct DeviceView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .presentationDetents([.height(presentationHeight)])
         .onAppear(perform: beginScanningIfNeeded)
+        .onChange(of: bluetooth.state) { _, state in
+            if state == .ready { dismiss() }
+        }
     }
 
     private func beginScanningIfNeeded() {

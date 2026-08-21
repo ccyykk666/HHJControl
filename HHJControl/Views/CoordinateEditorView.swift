@@ -20,7 +20,7 @@ struct CoordinateEditorView: View {
                         text: $latitude,
                         value: latitudeValue,
                         range: -90...90,
-                        step: 0.0001,
+                        step: 1,
                         identifier: "coordinate.latitude"
                     )
                     coordinateField(
@@ -28,7 +28,7 @@ struct CoordinateEditorView: View {
                         text: $longitude,
                         value: longitudeValue,
                         range: -180...180,
-                        step: 0.0001,
+                        step: 1,
                         identifier: "coordinate.longitude"
                     )
                     coordinateField(
