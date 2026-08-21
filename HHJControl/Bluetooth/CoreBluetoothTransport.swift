@@ -8,25 +8,33 @@ final class CoreBluetoothTransport: NSObject, BluetoothTransport {
     private lazy var central = CBCentralManager(delegate: self, queue: .main)
     private var peripherals: [UUID: CBPeripheral] = [:]
     private var characteristics: [UUID: [String: CBCharacteristic]] = [:]
+    private var scanningRequested = false
+    private var pendingConnection: UUID?
 
-    override init() {
-        super.init()
-        _ = central
-    }
+    override init() { super.init() }
 
     func startScanning() {
+        scanningRequested = true
         guard central.state == .poweredOn else { return }
         central.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
     }
 
-    func stopScanning() { central.stopScan() }
+    func stopScanning() { scanningRequested = false; central.stopScan() }
 
     func connect(identifier: UUID) {
+        pendingConnection = identifier
+        guard central.state == .poweredOn else { return }
+        connectWhenReady(identifier)
+    }
+
+    private func connectWhenReady(_ identifier: UUID) {
         let peripheral = peripherals[identifier] ?? central.retrievePeripherals(withIdentifiers: [identifier]).first
         guard let peripheral else {
+            pendingConnection = nil
             eventHandler?(.connectFailed(identifier, "未找到该设备，请重新扫描"))
             return
         }
+        pendingConnection = nil
         peripherals[identifier] = peripheral
         peripheral.delegate = self
         central.connect(peripheral)
@@ -80,6 +88,10 @@ extension CoreBluetoothTransport: @preconcurrency CBCentralManagerDelegate {
         @unknown default: .unknown
         }
         eventHandler?(.availability(availability))
+        if central.state == .poweredOn {
+            if scanningRequested { central.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]) }
+            if let pendingConnection { connectWhenReady(pendingConnection) }
+        }
     }
 
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {

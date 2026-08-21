@@ -30,6 +30,8 @@ final class HHJBluetoothController: ObservableObject {
 
     private let transport: BluetoothTransport
     private let defaults: UserDefaults
+    private let authenticationTimeout: Duration
+    private let reconnectDelay: (Int) -> Duration
     private var activeIdentifier: UUID?
     private var servicesFound = Set<String>()
     private var characteristicsFound = Set<String>()
@@ -39,17 +41,32 @@ final class HHJBluetoothController: ObservableObject {
     private var isForeground = true
     private var reconnectAttempt = 0
     private var authenticationToken = UUID()
+    private var availability: BluetoothAvailability = .unknown
+    private var authWriteReady = false
+    private var authNotifyReady = false
 
-    init(transport: BluetoothTransport, defaults: UserDefaults = .standard) {
+    init(
+        transport: BluetoothTransport,
+        defaults: UserDefaults = .standard,
+        authenticationTimeout: Duration = .seconds(8),
+        reconnectDelay: @escaping (Int) -> Duration = { .seconds($0) }
+    ) {
         self.transport = transport
         self.defaults = defaults
+        self.authenticationTimeout = authenticationTimeout
+        self.reconnectDelay = reconnectDelay
         transport.eventHandler = { [weak self] event in self?.handle(event) }
     }
 
     convenience init() { self.init(transport: CoreBluetoothTransport()) }
 
     func startScanning() {
+        guard availability == .poweredOn || availability == .unknown else {
+            state = .bluetoothUnavailable(availabilityMessage)
+            return
+        }
         resetSession(keepingIdentifier: false)
+        reconnectAttempt = 0
         manualDisconnect = false
         state = .scanning
         log(.info, "开始扫描所有 BLE 外设")
@@ -64,6 +81,7 @@ final class HHJBluetoothController: ObservableObject {
     func connect(to identifier: UUID) {
         transport.stopScanning()
         resetSession(keepingIdentifier: false)
+        reconnectAttempt = 0
         activeIdentifier = identifier
         manualDisconnect = false
         state = .connecting
@@ -151,7 +169,17 @@ final class HHJBluetoothController: ObservableObject {
             guard identifier == activeIdentifier else { return }
             guard error == nil else { fail("发现特征失败：\(error!)"); return }
             for value in values { characteristicsFound.insert(normalize(value.uuid)) }
-            if normalize(service) == normalize(HHJProtocolConstants.dataService) {
+            if normalize(service) == normalize(HHJProtocolConstants.authService) {
+                guard let write = values.first(where: { normalize($0.uuid) == normalize(HHJProtocolConstants.authWrite) }), write.canWriteWithResponse else {
+                    fail("认证写入特征 21E1 缺失或不支持响应写入"); return
+                }
+                guard let notify = values.first(where: { normalize($0.uuid) == normalize(HHJProtocolConstants.authNotify) }), notify.canNotify else {
+                    fail("认证通知特征 21E2 缺失或不支持通知"); return
+                }
+                authWriteReady = true
+                authNotifyReady = true
+                log(.info, "认证特征 21E1 与 21E2 已就绪")
+            } else if normalize(service) == normalize(HHJProtocolConstants.dataService) {
                 guard let location = values.first(where: { normalize($0.uuid) == normalize(HHJProtocolConstants.locationWrite) }), location.canWriteWithoutResponse else {
                     fail("定位特征 32E1 缺失或不支持无响应写入"); return
                 }
@@ -188,7 +216,7 @@ final class HHJBluetoothController: ObservableObject {
     private func beginAuthenticationIfPossible(_ identifier: UUID) {
         let write = normalize(HHJProtocolConstants.authWrite)
         let notify = normalize(HHJProtocolConstants.authNotify)
-        guard locationCharacteristicFound, characteristicsFound.contains(write), characteristicsFound.contains(notify), !authenticated, state != .authenticating else { return }
+        guard locationCharacteristicFound, authWriteReady, authNotifyReady, characteristicsFound.contains(write), characteristicsFound.contains(notify), !authenticated, state != .authenticating else { return }
         state = .authenticating
         log(.info, "订阅认证通知 21E2")
         transport.setNotify(true, characteristicUUID: HHJProtocolConstants.authNotify, identifier: identifier)
@@ -196,17 +224,20 @@ final class HHJBluetoothController: ObservableObject {
 
     private func startAuthenticationTimeout() {
         let token = UUID()
+        let timeout = authenticationTimeout
         authenticationToken = token
         Task { [weak self] in
-            try? await Task.sleep(for: .seconds(8))
+            try? await Task.sleep(for: timeout)
             guard let self, self.authenticationToken == token, !self.authenticated else { return }
             self.fail("认证超时，请重新认证")
         }
     }
 
     private func handleAvailability(_ availability: BluetoothAvailability) {
+        self.availability = availability
         switch availability {
         case .poweredOn:
+            if case .bluetoothUnavailable = state { state = .idle }
             log(.info, "蓝牙已开启")
         case .poweredOff: state = .bluetoothUnavailable("请在系统设置中开启蓝牙")
         case .unauthorized: state = .bluetoothUnavailable("未获得蓝牙权限，请前往设置授权")
@@ -216,8 +247,7 @@ final class HHJBluetoothController: ObservableObject {
     }
 
     private func reconnectOrFail(_ identifier: UUID) {
-        authenticated = false
-        locationCharacteristicFound = false
+        resetSession(keepingIdentifier: true)
         guard isForeground, !manualDisconnect, reconnectAttempt < 5 else {
             fail(reconnectAttempt >= 5 ? "自动重连已达到 5 次" : "连接已断开")
             return
@@ -229,10 +259,11 @@ final class HHJBluetoothController: ObservableObject {
         activeIdentifier = identifier
         reconnectAttempt += 1
         let delay = reconnectAttempt
+        let duration = reconnectDelay(delay)
         state = .reconnecting(attempt: reconnectAttempt)
         log(.info, "将在 \(delay) 秒后重连")
         Task { [weak self] in
-            try? await Task.sleep(for: .seconds(delay))
+            try? await Task.sleep(for: duration)
             guard let self, self.isForeground, !self.manualDisconnect, self.activeIdentifier == identifier else { return }
             self.state = .connecting
             self.transport.connect(identifier: identifier)
@@ -244,6 +275,8 @@ final class HHJBluetoothController: ObservableObject {
         servicesFound.removeAll()
         characteristicsFound.removeAll()
         locationCharacteristicFound = false
+        authWriteReady = false
+        authNotifyReady = false
         authenticated = false
         if !keepingIdentifier { activeIdentifier = nil }
     }
@@ -262,6 +295,16 @@ final class HHJBluetoothController: ObservableObject {
 
     private func normalize(_ uuid: String) -> String { uuid.uppercased() }
     private func shortUUID(_ uuid: String) -> String { String(normalize(uuid).prefix(8)) }
+
+    private var availabilityMessage: String {
+        switch availability {
+        case .poweredOff: "请在系统设置中开启蓝牙"
+        case .unauthorized: "未获得蓝牙权限，请前往设置授权"
+        case .unsupported: "此设备不支持低功耗蓝牙"
+        case .unknown, .resetting: "蓝牙正在初始化"
+        case .poweredOn: "蓝牙可用"
+        }
+    }
 
     enum ControllerError: LocalizedError {
         case notReady

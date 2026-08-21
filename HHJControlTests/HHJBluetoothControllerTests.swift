@@ -46,6 +46,58 @@ final class HHJBluetoothControllerTests: XCTestCase {
         if case .failed = controller.state {} else { XCTFail("Expected failed state") }
     }
 
+    func testNotificationSubscriptionFailureFailsClosed() {
+        let (controller, transport, id) = makeDiscoveredController(sendNotificationState: false)
+        transport.send(.notificationState(id, characteristic: HHJProtocolConstants.authNotify, enabled: false, error: "notify rejected"))
+        XCTAssertFalse(controller.canSendLocation)
+        if case .failed(let message) = controller.state { XCTAssertTrue(message.contains("订阅认证通知失败")) }
+        else { XCTFail("Expected failed state") }
+    }
+
+    func testAuthenticationWriteFailureFailsClosed() {
+        let (controller, transport, id) = makeDiscoveredController()
+        transport.send(.writeCompleted(id, characteristic: HHJProtocolConstants.authWrite, error: "write rejected"))
+        XCTAssertFalse(controller.canSendLocation)
+        if case .failed(let message) = controller.state { XCTAssertTrue(message.contains("写入")) }
+        else { XCTFail("Expected failed state") }
+    }
+
+    func testAuthenticationTimeoutFailsClosed() async {
+        let transport = FakeBluetoothTransport()
+        let controller = HHJBluetoothController(
+            transport: transport,
+            defaults: UserDefaults(suiteName: UUID().uuidString)!,
+            authenticationTimeout: .zero
+        )
+        let id = discover(controller: controller, transport: transport)
+        transport.send(.notificationState(id, characteristic: HHJProtocolConstants.authNotify, enabled: true, error: nil))
+        await Task.yield()
+        await Task.yield()
+        XCTAssertFalse(controller.canSendLocation)
+        if case .failed(let message) = controller.state { XCTAssertTrue(message.contains("认证超时")) }
+        else { XCTFail("Expected authentication timeout") }
+    }
+
+    func testAutomaticReconnectStopsAfterFiveAttempts() async {
+        let transport = FakeBluetoothTransport()
+        let controller = HHJBluetoothController(
+            transport: transport,
+            defaults: UserDefaults(suiteName: UUID().uuidString)!,
+            reconnectDelay: { _ in .zero }
+        )
+        let id = UUID()
+        controller.connect(to: id)
+        for _ in 0..<5 {
+            transport.send(.connectFailed(id, "offline"))
+            await Task.yield()
+            await Task.yield()
+        }
+        transport.send(.connectFailed(id, "offline"))
+        XCTAssertEqual(transport.connectCalls.count, 6, "one manual attempt plus five bounded reconnects")
+        if case .failed(let message) = controller.state { XCTAssertTrue(message.contains("5 次")) }
+        else { XCTFail("Expected reconnect exhaustion") }
+    }
+
     func testManualDisconnectDoesNotReconnect() {
         let transport = FakeBluetoothTransport()
         let controller = HHJBluetoothController(transport: transport, defaults: UserDefaults(suiteName: UUID().uuidString)!)
@@ -57,9 +109,15 @@ final class HHJBluetoothControllerTests: XCTestCase {
         XCTAssertEqual(transport.connectCalls, [id])
     }
 
-    private func makeDiscoveredController() -> (HHJBluetoothController, FakeBluetoothTransport, UUID) {
+    private func makeDiscoveredController(sendNotificationState: Bool = true) -> (HHJBluetoothController, FakeBluetoothTransport, UUID) {
         let transport = FakeBluetoothTransport()
         let controller = HHJBluetoothController(transport: transport, defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let id = discover(controller: controller, transport: transport)
+        if sendNotificationState { transport.send(.notificationState(id, characteristic: HHJProtocolConstants.authNotify, enabled: true, error: nil)) }
+        return (controller, transport, id)
+    }
+
+    private func discover(controller: HHJBluetoothController, transport: FakeBluetoothTransport) -> UUID {
         let id = UUID()
         controller.connect(to: id)
         transport.send(.connected(id))
@@ -71,8 +129,7 @@ final class HHJBluetoothControllerTests: XCTestCase {
         transport.send(.characteristics(id, service: HHJProtocolConstants.dataService, values: [
             .init(uuid: HHJProtocolConstants.locationWrite, canWriteWithResponse: false, canWriteWithoutResponse: true, canNotify: false)
         ], error: nil))
-        transport.send(.notificationState(id, characteristic: HHJProtocolConstants.authNotify, enabled: true, error: nil))
-        return (controller, transport, id)
+        return id
     }
 }
 

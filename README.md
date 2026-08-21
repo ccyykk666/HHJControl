@@ -12,7 +12,7 @@ App 本身不能通过公开 iOS API 修改系统定位。实际效果依赖兼�
 - 中国范围 GCJ‑02 → WGS‑84，境外原样发送
 - 海拔编辑、收藏、最近记录与遮盖认证信息的诊断日志
 - 原生 iOS 26 Tab/Search 与 Liquid Glass
-- 本机 Codable JSON 存储；无账号、网络、统计 SDK 或第三方 Framework
+- 本机 Codable JSON 存储；无账号、自建网络请求、统计 SDK 或第三方 Framework
 
 ## 本地生成工程
 
@@ -47,4 +47,4 @@ gh run watch --exit-status -R ccyykk666/HHJControl
 
 ## 安全与隐私
 
-仓库不包含原 IPA 的反编译代码、资源、README 或脚本，不包含证书、描述文件、Base64、密码或 Token。应用不声明蓝牙后台模式，不开放 ATS，不进行网络访问，不跟踪或收集用户数据。
+仓库不包含原 IPA 的反编译代码、资源、README 或脚本，不包含证书、描述文件、Base64、密码或 Token。应用不声明蓝牙后台模式，不开放 ATS，不进行自建网络请求或数据上传；地点搜索与地址解析仅使用系统 MapKit。应用不跟踪或收集用户数据。
