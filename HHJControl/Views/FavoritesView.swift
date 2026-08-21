@@ -21,7 +21,7 @@ struct FavoritesView: View {
 
     private var favoritesList: some View {
         Group {
-            if store.favorites.isEmpty { ContentUnavailableView("暂无收藏", systemImage: "star", description: Text("在定位页选择地点后点击星标。")) }
+            if store.favorites.isEmpty { ContentUnavailableView("暂无收藏", systemImage: "star") }
             else {
                 List {
                     ForEach(store.favorites) { place in
@@ -38,7 +38,7 @@ struct FavoritesView: View {
 
     private var recordsList: some View {
         Group {
-            if store.records.isEmpty { ContentUnavailableView("暂无记录", systemImage: "clock", description: Text("成功或失败的发送都会保留在这里，最多 100 条。")) }
+            if store.records.isEmpty { ContentUnavailableView("暂无记录", systemImage: "clock") }
             else {
                 List {
                     ForEach(store.records) { record in
@@ -97,4 +97,3 @@ private struct FavoriteEditor: View {
         }
     }
 }
-

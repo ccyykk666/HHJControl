@@ -43,7 +43,15 @@ struct SearchView: View {
                         }
                     } else if search.completions.isEmpty {
                         if let error = search.errorMessage { ContentUnavailableView("搜索失败", systemImage: "exclamationmark.magnifyingglass", description: Text(error)) }
-                        else if search.isSearching { ProgressView("正在搜索…") }
+                        else if search.isSearching {
+                            VStack(spacing: 12) {
+                                ProgressView()
+                                Text("正在搜索…")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 32)
+                        }
                         else { ContentUnavailableView("暂无结果", systemImage: "magnifyingglass") }
                     } else {
                         List(search.completions, id: \.self) { result in
@@ -56,13 +64,7 @@ struct SearchView: View {
                         }
                     }
                 }
-
-                if regionMode == .international {
-                    Link("Powered by Geoapify", destination: URL(string: "https://www.geoapify.com/")!)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .padding(.vertical, 6)
-                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
             .navigationTitle("搜索")
             .searchable(text: $search.query, placement: .navigationBarDrawer(displayMode: .always), prompt: "地址或地点")
