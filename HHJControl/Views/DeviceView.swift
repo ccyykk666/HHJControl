@@ -4,9 +4,23 @@ import UIKit
 struct DeviceView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var bluetooth: HHJBluetoothController
+    @State private var contentHeight: CGFloat = 320
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            ZStack {
+                Text("选择设备").font(.headline)
+                HStack {
+                    Spacer()
+                    Button("完成") { dismiss() }
+                        .buttonStyle(.glass)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+
+            Divider()
+
             VStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 14) {
                     Label(
@@ -28,7 +42,7 @@ struct DeviceView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
-                .background(.background, in: .rect(cornerRadius: 20))
+                .background(Color(uiColor: .secondarySystemGroupedBackground), in: .rect(cornerRadius: 20))
 
                 if !bluetooth.canSendLocation {
                     VStack(alignment: .leading, spacing: 12) {
@@ -71,23 +85,23 @@ struct DeviceView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(16)
-                    .background(.background, in: .rect(cornerRadius: 20))
+                    .background(Color(uiColor: .secondarySystemGroupedBackground), in: .rect(cornerRadius: 20))
                 }
             }
             .padding(20)
-            .navigationTitle("选择设备")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("完成") { dismiss() }
-                }
-            }
-            .onAppear(perform: beginScanningIfNeeded)
-            .onChange(of: bluetooth.state) { _, state in
-                if state == .ready { dismiss() }
-            }
         }
-        .presentationSizing(.fitted)
+        .fixedSize(horizontal: false, vertical: true)
+        .background(Color(uiColor: .systemGroupedBackground))
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.height
+        } action: { height in
+            if abs(contentHeight - height) > 1 { contentHeight = height }
+        }
+        .presentationDetents([.height(min(max(contentHeight, 220), 650))])
+        .onAppear(perform: beginScanningIfNeeded)
+        .onChange(of: bluetooth.state) { _, state in
+            if state == .ready { dismiss() }
+        }
     }
 
     private func beginScanningIfNeeded() {
