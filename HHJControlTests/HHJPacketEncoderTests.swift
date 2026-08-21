@@ -12,7 +12,7 @@ final class HHJPacketEncoderTests: XCTestCase {
         XCTAssertEqual(HHJPacketEncoder.degreeMinutes(1.5), "130.000000")
         XCTAssertEqual(HHJPacketEncoder.degreeMinutes(-12.3456), "1220.736000")
         XCTAssertEqual(HHJPacketEncoder.degreeMinutes(123.4567), "12327.402000")
-        XCTAssertEqual(HHJPacketEncoder.degreeMinutes(0.01), "00.600000")
+        XCTAssertEqual(HHJPacketEncoder.degreeMinutes(0.01), "000.600000")
     }
 
     func testOutsideChinaIsUnchanged() {
@@ -46,4 +46,3 @@ final class HHJPacketEncoderTests: XCTestCase {
         XCTAssertThrowsError(try HHJPacketEncoder.locationPayload(selection: selection, date: date)) { XCTAssertEqual($0 as? HHJPacketError, .invalidAltitude) }
     }
 }
-
