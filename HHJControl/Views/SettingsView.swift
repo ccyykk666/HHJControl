@@ -14,11 +14,9 @@ struct SettingsView: View {
                 Button("打开系统设置") { if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) } }
             }
             Section("关于") {
-                LabeledContent("应用", value: "设备控制")
+                LabeledContent("应用", value: "HHJControl")
                 LabeledContent("版本", value: version)
-                LabeledContent("最低系统", value: "iOS 26.0")
-                Link("海外地址服务：Geoapify", destination: URL(string: "https://www.geoapify.com/")!)
-                Text("本应用只负责通过 BLE 配置兼容设备，本身不能通过公开 iOS API 修改系统定位。")
+                Link("海外地址API：Geoapify", destination: URL(string: "https://www.geoapify.com/")!)
             }
         }.navigationTitle("设置")
     }
