@@ -1,10 +1,16 @@
 import SwiftUI
 
 struct LocationView: View {
+    private enum SendButtonState: Equatable {
+        case idle, sending, success, failure
+    }
+
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var bluetooth: HHJBluetoothController
     @EnvironmentObject private var store: AppDataStore
     @State private var showDevices = false
+    @State private var sendButtonState: SendButtonState = .idle
+    @State private var sendFeedbackTask: Task<Void, Never>?
 
     var body: some View {
         NavigationStack {
@@ -62,12 +68,33 @@ struct LocationView: View {
                                 .accessibilityIdentifier("location.favorite")
                                 .accessibilityLabel(store.isFavorite(model.selection) ? "取消收藏" : "收藏")
                         }
-                        Button(action: model.sendSelection) {
-                            Label("设置定位", systemImage: "location.circle.fill").frame(maxWidth: .infinity).font(.headline)
+                        Button(action: sendLocation) {
+                            HStack(spacing: 8) {
+                                switch sendButtonState {
+                                case .idle:
+                                    Image(systemName: "location.circle.fill")
+                                    Text("设置定位")
+                                case .sending:
+                                    ProgressView()
+                                        .controlSize(.small)
+                                        .tint(.white)
+                                    Text("设置中…")
+                                case .success:
+                                    Image(systemName: "checkmark.circle.fill")
+                                    Text("已设置")
+                                case .failure:
+                                    Image(systemName: "exclamationmark.circle.fill")
+                                    Text("设置失败")
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .font(.headline)
                         }
                         .buttonStyle(.borderedProminent).controlSize(.large)
                         .accessibilityIdentifier("location.send")
+                        .accessibilityLabel(sendButtonTitle)
                         .disabled(!bluetooth.canSendLocation || !model.selection.isValid)
+                        .animation(.easeInOut(duration: 0.2), value: sendButtonState)
                     }
                     .padding(18)
                     .glassEffect(.regular, in: .rect(cornerRadius: 28))
@@ -76,6 +103,32 @@ struct LocationView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showDevices) { DeviceView() }
+        }
+    }
+
+    private var sendButtonTitle: String {
+        switch sendButtonState {
+        case .idle: "设置定位"
+        case .sending: "设置中"
+        case .success: "已设置"
+        case .failure: "设置失败"
+        }
+    }
+
+    private func sendLocation() {
+        guard sendButtonState == .idle else { return }
+        sendFeedbackTask?.cancel()
+        sendButtonState = .sending
+        let succeeded = model.sendSelection()
+        sendFeedbackTask = Task { @MainActor in
+            do {
+                try await Task.sleep(for: .milliseconds(450))
+                sendButtonState = succeeded ? .success : .failure
+                try await Task.sleep(for: .seconds(1))
+                sendButtonState = .idle
+            } catch {
+                sendButtonState = .idle
+            }
         }
     }
 }

@@ -16,7 +16,7 @@ struct SettingsView: View {
             Section("关于") {
                 LabeledContent("应用", value: "HHJControl")
                 LabeledContent("版本", value: version)
-                Link("海外地址API：Geoapify", destination: URL(string: "https://www.geoapify.com/")!)
+                Link("国外地址提供", destination: URL(string: "https://www.geoapify.com/")!)
             }
         }.navigationTitle("设置")
     }
