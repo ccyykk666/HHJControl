@@ -12,6 +12,7 @@ final class AppModel: ObservableObject {
     @Published var administrativeArea = "正在获取区域…"
     @Published var mapRequestID = UUID()
     @Published var notice: String?
+    @Published private(set) var geocodingLogs: [CommunicationLog] = []
 
     let bluetooth: HHJBluetoothController
     let store: AppDataStore
@@ -20,6 +21,10 @@ final class AppModel: ObservableObject {
     private var reverseGeocodingTask: Task<Void, Never>?
     private var reverseGeocodingID = UUID()
     private var didPrepareForLaunch = false
+
+    var diagnosticLogs: [CommunicationLog] {
+        (bluetooth.logs + geocodingLogs).sorted { $0.date > $1.date }
+    }
 
     init(bluetooth: HHJBluetoothController? = nil, store: AppDataStore? = nil) {
         self.bluetooth = bluetooth ?? HHJBluetoothController()
@@ -84,11 +89,19 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func copyableDiagnostics() -> String {
+        diagnosticLogs
+            .sorted { $0.date < $1.date }
+            .map { "[\($0.date.formatted(date: .numeric, time: .standard))] \($0.level.rawValue) \($0.message)" }
+            .joined(separator: "\n")
+    }
+
     private func resolveAddress(for coordinate: CLLocationCoordinate2D, updateName: Bool) {
         reverseGeocodingTask?.cancel()
         reverseGeocodingRequest?.cancel()
         let requestID = UUID()
         reverseGeocodingID = requestID
+        logGeocoding(.info, "反向地理编码排队：\(coordinateText(coordinate))")
 
         reverseGeocodingTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(350))
@@ -99,10 +112,27 @@ final class AppModel: ObservableObject {
             guard let request = MKReverseGeocodingRequest(location: .init(latitude: coordinate.latitude, longitude: coordinate.longitude)) else {
                 if updateName { self.selection.address = "已选择的位置" }
                 self.administrativeArea = "区域信息不可用"
+                self.logGeocoding(.error, "反向地理编码无法创建请求：\(self.coordinateText(coordinate))")
                 return
             }
             self.reverseGeocodingRequest = request
-            let item = try? await request.mapItems.first
+            self.logGeocoding(.info, "反向地理编码开始：\(self.coordinateText(coordinate))")
+
+            let item: MKMapItem?
+            do {
+                let items = try await request.mapItems
+                item = items.first
+                self.logGeocoding(.info, "反向地理编码返回 \(items.count) 个地点")
+            } catch {
+                guard !Task.isCancelled,
+                      self.isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate) else { return }
+                let error = error as NSError
+                if updateName { self.selection.address = "已选择的位置" }
+                self.administrativeArea = "区域信息不可用"
+                self.logGeocoding(.error, "反向地理编码失败：\(error.domain) (\(error.code)) \(error.localizedDescription)")
+                return
+            }
+
             guard !Task.isCancelled,
                   self.isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate) else { return }
             if updateName {
@@ -111,7 +141,13 @@ final class AppModel: ObservableObject {
                     ?? item?.addressRepresentations?.cityName?.nilIfEmpty
                     ?? "已选择的位置"
             }
-            self.administrativeArea = item.flatMap(self.administrativeArea(for:)) ?? "区域信息不可用"
+            if let area = item.flatMap(self.administrativeArea(for:)) {
+                self.administrativeArea = area
+                self.logGeocoding(.success, "区域信息：\(area)")
+            } else {
+                self.administrativeArea = "区域信息不可用"
+                self.logGeocoding(.warning, "地点未提供可显示的区域信息")
+            }
         }
     }
 
@@ -119,6 +155,15 @@ final class AppModel: ObservableObject {
         reverseGeocodingID == requestID
             && selection.mapCoordinate.latitude == coordinate.latitude
             && selection.mapCoordinate.longitude == coordinate.longitude
+    }
+
+    private func logGeocoding(_ level: CommunicationLog.Level, _ message: String) {
+        geocodingLogs.append(.init(level: level, message: "地图：\(message)"))
+        if geocodingLogs.count > 100 { geocodingLogs.removeFirst(geocodingLogs.count - 100) }
+    }
+
+    private func coordinateText(_ coordinate: CLLocationCoordinate2D) -> String {
+        String(format: "%.6f, %.6f", coordinate.latitude, coordinate.longitude)
     }
 
     private func administrativeArea(for item: MKMapItem) -> String? {

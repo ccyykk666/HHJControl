@@ -144,12 +144,15 @@ struct AdvancedView: View {
 
                 Section("诊断与设置") {
                     Button { showLogs = true } label: {
-                        Label("通信日志（\(bluetooth.logs.count)）", systemImage: "doc.text.magnifyingglass")
+                        Label("诊断日志（\(model.diagnosticLogs.count)）", systemImage: "doc.text.magnifyingglass")
                     }
                     Button {
-                        UIPasteboard.general.string = bluetooth.copyableDiagnostics()
+                        UIPasteboard.general.string = model.copyableDiagnostics()
                     } label: {
                         Label("复制诊断日志", systemImage: "doc.on.doc")
+                    }
+                    ShareLink(item: model.copyableDiagnostics()) {
+                        Label("分享诊断日志", systemImage: "square.and.arrow.up")
                     }
                     NavigationLink {
                         SettingsView()
@@ -173,11 +176,11 @@ struct AdvancedView: View {
 
 private struct DiagnosticLogView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var bluetooth: HHJBluetoothController
+    @EnvironmentObject private var model: AppModel
 
     var body: some View {
         NavigationStack {
-            List(bluetooth.logs) { entry in
+            List(model.diagnosticLogs) { entry in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(entry.level.rawValue).font(.caption.weight(.semibold))
@@ -187,7 +190,7 @@ private struct DiagnosticLogView: View {
                     Text(entry.message).font(.caption.monospaced())
                 }
             }
-            .navigationTitle("通信日志")
+            .navigationTitle("诊断日志")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("完成") { dismiss() }
