@@ -113,7 +113,17 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Compile and run protocol tests without signing
+      - name: Compile without signing
+        run: |
+          xcodebuild build \
+            -project HHJControl.xcodeproj \
+            -scheme HHJControl \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CURRENT_PROJECT_VERSION='${{ github.run_number }}'
+
+      - name: Run protocol tests in simulator
+        timeout-minutes: 12
         run: |
           set -euo pipefail
           SIMULATOR_ID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for runtime in d.values() for x in runtime if x["name"].startswith("iPhone")))')
@@ -121,7 +131,10 @@ jobs:
             -project HHJControl.xcodeproj \
             -scheme HHJControl \
             -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
-            CODE_SIGNING_ALLOWED=NO \
+            -parallel-testing-enabled NO \
+            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGN_IDENTITY=- \
+            CODE_SIGNING_REQUIRED=NO \
             CURRENT_PROJECT_VERSION='${{ github.run_number }}'
 
       - name: Archive with manual signing
@@ -239,4 +252,3 @@ jobs:
       - name: Deploy Pages
         id: deployment
         uses: actions/deploy-pages@v5
-
