@@ -145,6 +145,9 @@ private extension Optional where Wrapped == String {
 }
 
 private extension String {
+    var nonempty: String? {
+        trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    }
     var nilIfEmpty: String? { isEmpty ? nil : self }
     var usableBuildSetting: String? {
         guard !isEmpty, !hasPrefix("$(") else { return nil }
