@@ -53,7 +53,8 @@ final class AppModel: ObservableObject {
         address: String? = nil,
         altitude: Double? = nil,
         source: LocationSelection.Source,
-        moveMap: Bool = true
+        moveMap: Bool = true,
+        reverseGeocodingDelay: Duration = .milliseconds(800)
     ) {
         let wgs84 = mapCoordinateReference.wgs84Coordinate(forDisplay: coordinate)
         selection = LocationSelection(
@@ -65,7 +66,12 @@ final class AppModel: ObservableObject {
         )
         administrativeArea = "正在获取区域…"
         if moveMap { mapRequestID = UUID() }
-        resolveAddress(for: coordinate, wgs84Coordinate: wgs84, updateName: address == nil)
+        resolveAddress(
+            for: coordinate,
+            wgs84Coordinate: wgs84,
+            updateName: address == nil,
+            delay: reverseGeocodingDelay
+        )
     }
 
     func select(_ item: MKMapItem, title: String? = nil, regionFallback: String? = nil) {
@@ -195,7 +201,8 @@ final class AppModel: ObservableObject {
     private func resolveAddress(
         for coordinate: CLLocationCoordinate2D,
         wgs84Coordinate: CLLocationCoordinate2D,
-        updateName: Bool
+        updateName: Bool,
+        delay: Duration = .milliseconds(800)
     ) {
         reverseGeocodingTask?.cancel()
         reverseGeocodingRequest?.cancel()
@@ -203,7 +210,7 @@ final class AppModel: ObservableObject {
         reverseGeocodingID = requestID
 
         reverseGeocodingTask = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(800))
+            try? await Task.sleep(for: delay)
             guard !Task.isCancelled,
                   let self,
                   self.isCurrentReverseGeocodingRequest(requestID, coordinate: coordinate) else { return }

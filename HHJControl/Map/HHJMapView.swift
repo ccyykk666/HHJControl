@@ -4,7 +4,7 @@ import SwiftUI
 struct HHJMapView: UIViewRepresentable {
     @Binding var selection: LocationSelection
     var mapRequestID: UUID
-    var onSelect: (CLLocationCoordinate2D, LocationSelection.Source) -> Void
+    var onSelect: (CLLocationCoordinate2D, LocationSelection.Source, Duration) -> Void
     var onRegionChange: (MKCoordinateRegion) -> Void
     var onUserLocationUpdate: (CLLocation) -> Void
 
@@ -42,7 +42,12 @@ struct HHJMapView: UIViewRepresentable {
         var parent: HHJMapView
         var lastRequestID: UUID?
         var programmaticMove = false
+        var regionSelectionTask: Task<Void, Never>?
         init(parent: HHJMapView) { self.parent = parent }
+
+        deinit {
+            regionSelectionTask?.cancel()
+        }
 
         func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
             guard let location = userLocation.location, location.horizontalAccuracy >= 0 else { return }
@@ -51,16 +56,23 @@ struct HHJMapView: UIViewRepresentable {
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
             parent.onRegionChange(mapView.region)
+            regionSelectionTask?.cancel()
             if programmaticMove { programmaticMove = false; return }
-            parent.onSelect(mapView.centerCoordinate, .map)
+            let coordinate = mapView.centerCoordinate
+            regionSelectionTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .milliseconds(800))
+                guard !Task.isCancelled else { return }
+                self?.parent.onSelect(coordinate, .map, .zero)
+            }
         }
 
         @objc func longPressed(_ recognizer: UILongPressGestureRecognizer) {
             guard recognizer.state == .began, let map = recognizer.view as? MKMapView else { return }
+            regionSelectionTask?.cancel()
             let coordinate = map.convert(recognizer.location(in: map), toCoordinateFrom: map)
             programmaticMove = true
             map.setCenter(coordinate, animated: true)
-            parent.onSelect(coordinate, .longPress)
+            parent.onSelect(coordinate, .longPress, .milliseconds(800))
         }
 
     }

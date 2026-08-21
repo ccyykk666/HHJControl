@@ -16,8 +16,13 @@ struct LocationView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                HHJMapView(selection: $model.selection, mapRequestID: model.mapRequestID) { coordinate, source in
-                    model.select(coordinate, source: source, moveMap: false)
+                HHJMapView(selection: $model.selection, mapRequestID: model.mapRequestID) { coordinate, source, reverseGeocodingDelay in
+                    model.select(
+                        coordinate,
+                        source: source,
+                        moveMap: false,
+                        reverseGeocodingDelay: reverseGeocodingDelay
+                    )
                 } onRegionChange: { region in
                     model.updateSearchRegion(region)
                 } onUserLocationUpdate: { location in
