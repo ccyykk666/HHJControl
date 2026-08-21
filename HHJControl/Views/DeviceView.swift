@@ -7,13 +7,17 @@ struct DeviceView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    Label(bluetooth.state.title, systemImage: bluetooth.canSendLocation ? "checkmark.seal.fill" : "antenna.radiowaves.left.and.right")
-                        .font(.headline)
-                        .foregroundStyle(bluetooth.canSendLocation ? .green : .primary)
+            VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 14) {
+                    Label(
+                        bluetooth.state.title,
+                        systemImage: bluetooth.canSendLocation ? "checkmark.seal.fill" : "antenna.radiowaves.left.and.right"
+                    )
+                    .font(.headline)
+                    .foregroundStyle(bluetooth.canSendLocation ? .green : .primary)
 
                     if bluetooth.connectedIdentifier != nil {
+                        Divider()
                         HStack {
                             Button("断开", role: .destructive) { bluetooth.disconnect() }
                             if !bluetooth.canSendLocation {
@@ -22,9 +26,15 @@ struct DeviceView: View {
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(.background, in: .rect(cornerRadius: 20))
 
                 if !bluetooth.canSendLocation {
-                    Section("设备列表") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("设备列表").font(.headline)
+                        Divider()
+
                         if bluetooth.devices.isEmpty {
                             HStack {
                                 ProgressView().opacity(bluetooth.state == .scanning ? 1 : 0)
@@ -32,27 +42,39 @@ struct DeviceView: View {
                                     .foregroundStyle(.secondary)
                             }
                         } else {
-                            ForEach(bluetooth.devices) { device in
-                                Button {
-                                    bluetooth.connect(to: device.id)
-                                } label: {
-                                    HStack {
-                                        Text(device.name).foregroundStyle(.primary)
-                                        Spacer()
-                                        Text("\(device.rssi) dBm")
-                                            .font(.caption.monospacedDigit())
-                                            .foregroundStyle(.secondary)
+                            ScrollView {
+                                LazyVStack(spacing: 0) {
+                                    ForEach(bluetooth.devices) { device in
+                                        Button {
+                                            bluetooth.connect(to: device.id)
+                                        } label: {
+                                            HStack {
+                                                Text(device.name).foregroundStyle(.primary)
+                                                Spacer()
+                                                Text("\(device.rssi) dBm")
+                                                    .font(.caption.monospacedDigit())
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            .padding(.vertical, 11)
+                                        }
+                                        if device.id != bluetooth.devices.last?.id { Divider() }
                                     }
                                 }
                             }
+                            .frame(maxHeight: 280)
                         }
 
                         if bluetooth.state != .scanning {
+                            Divider()
                             Button("重新扫描") { bluetooth.startScanning() }
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(.background, in: .rect(cornerRadius: 20))
                 }
             }
+            .padding(20)
             .navigationTitle("选择设备")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -65,6 +87,7 @@ struct DeviceView: View {
                 if state == .ready { dismiss() }
             }
         }
+        .presentationSizing(.fitted)
     }
 
     private func beginScanningIfNeeded() {

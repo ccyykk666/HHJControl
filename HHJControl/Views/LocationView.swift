@@ -46,7 +46,7 @@ struct LocationView: View {
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(model.selection.address).font(.headline).lineLimit(2)
-                                Text(String(format: "地图 %.6f, %.6f", model.selection.mapLatitude, model.selection.mapLongitude))
+                                Text(String(format: "经纬度 %.6f, %.6f", model.selection.mapLatitude, model.selection.mapLongitude))
                                     .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                             }
                             Spacer()
