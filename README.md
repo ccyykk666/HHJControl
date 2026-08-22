@@ -16,4 +16,4 @@ App 本身不能通过公开 iOS API 修改系统定位。实际效果依赖兼�
 
 ## 下载与安装
 
-最新版本与 IPA 下载位于 [Releases](https://github.com/ccyykk666/HHJControl/releases)。请使用 iPhone Safari 打开 [在线安装页](https://ccyykk666.github.io/HHJControl/) 安装。
+最新版本与 IPA 下载位于 [Releases](https://github.com/ccyykk666/HHJControl/releases)。下载 IPA 后，请使用自签名方式安装。
