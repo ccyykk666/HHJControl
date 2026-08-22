@@ -9,18 +9,15 @@ struct SearchView: View {
     var body: some View {
         NavigationStack {
             List {
-                Picker("搜索区域", selection: $regionMode) {
-                    ForEach(SearchRegionMode.allCases) { mode in
-                        Text(mode.rawValue).tag(mode)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .listRowSeparator(.hidden)
-
                 searchContent
             }
             .navigationTitle("搜索")
             .searchable(text: $search.query, placement: .navigationBarDrawer(displayMode: .always), prompt: "地址或地点")
+            .searchScopes($regionMode) {
+                ForEach(SearchRegionMode.allCases) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
             .onSubmit(of: .search) { search.submit() }
             .onAppear { configureSearch() }
             .onChange(of: regionMode) { _, _ in configureSearch() }

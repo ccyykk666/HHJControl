@@ -10,17 +10,21 @@ struct FavoritesView: View {
     var body: some View {
         NavigationStack {
             List {
-                Picker("内容", selection: $segment) { ForEach(Segment.allCases) { Text($0.rawValue).tag($0) } }
-                    .pickerStyle(.segmented)
-                    .listRowSeparator(.hidden)
-
                 if segment == .favorites {
                     favoritesList
                 } else {
                     recordsList
                 }
             }
-            .navigationTitle("地点")
+            .navigationTitle(segment.rawValue)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Picker(segment.rawValue, selection: $segment) {
+                        ForEach(Segment.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                    .pickerStyle(.menu)
+                }
+            }
             .sheet(item: $editingPlace) { place in FavoriteEditor(place: place) }
         }
     }
