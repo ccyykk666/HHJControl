@@ -8,68 +8,61 @@ struct SearchView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                searchContent
+            VStack(spacing: 0) {
+                Picker("搜索区域", selection: $regionMode) {
+                    ForEach(SearchRegionMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+
+                Group {
+                    if search.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        ContentUnavailableView("搜索地点", systemImage: "magnifyingglass", description: Text("输入地址、地标或商户名称。"))
+                    } else if !search.results.isEmpty {
+                        List(search.results) { result in
+                            Button { choose(result) } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(result.title).foregroundStyle(.primary)
+                                    if !result.subtitle.isEmpty {
+                                        Text(result.subtitle).font(.caption).foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        }
+                    } else if search.completions.isEmpty {
+                        if let error = search.errorMessage { ContentUnavailableView("搜索失败", systemImage: "exclamationmark.magnifyingglass", description: Text(error)) }
+                        else if search.isSearching {
+                            VStack(spacing: 12) {
+                                ProgressView()
+                                Text("正在搜索…")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 32)
+                        }
+                        else { ContentUnavailableView("暂无结果", systemImage: "magnifyingglass") }
+                    } else {
+                        List(search.completions, id: \.self) { result in
+                            Button { choose(result) } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(result.title).foregroundStyle(.primary)
+                                    if !result.subtitle.isEmpty { Text(result.subtitle).font(.caption).foregroundStyle(.secondary) }
+                                }
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
             .navigationTitle("搜索")
             .searchable(text: $search.query, placement: .navigationBarDrawer(displayMode: .always), prompt: "地址或地点")
-            .searchScopes($regionMode) {
-                ForEach(SearchRegionMode.allCases) { mode in
-                    Text(mode.rawValue).tag(mode)
-                }
-            }
             .onSubmit(of: .search) { search.submit() }
             .onAppear { configureSearch() }
             .onChange(of: regionMode) { _, _ in configureSearch() }
             .onReceive(model.$searchRegion) { _ in configureSearch() }
-        }
-    }
-
-    @ViewBuilder
-    private var searchContent: some View {
-        if search.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            ContentUnavailableView("搜索地点", systemImage: "magnifyingglass", description: Text("输入地址、地标或商户名称。"))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-        } else if !search.results.isEmpty {
-            ForEach(search.results) { result in
-                Button { choose(result) } label: {
-                    searchRow(title: result.title, subtitle: result.subtitle)
-                }
-            }
-        } else if search.completions.isEmpty {
-            if let error = search.errorMessage {
-                ContentUnavailableView("搜索失败", systemImage: "exclamationmark.magnifyingglass", description: Text(error))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            } else if search.isSearching {
-                HStack(spacing: 12) {
-                    ProgressView()
-                    Text("正在搜索…")
-                        .foregroundStyle(.secondary)
-                }
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            } else {
-                ContentUnavailableView("暂无结果", systemImage: "magnifyingglass")
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
-        } else {
-            ForEach(search.completions, id: \.self) { result in
-                Button { choose(result) } label: {
-                    searchRow(title: result.title, subtitle: result.subtitle)
-                }
-            }
-        }
-    }
-
-    private func searchRow(title: String, subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title).foregroundStyle(.primary)
-            if !subtitle.isEmpty {
-                Text(subtitle).font(.caption).foregroundStyle(.secondary)
-            }
         }
     }
 

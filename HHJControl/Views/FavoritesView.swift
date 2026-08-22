@@ -9,57 +9,45 @@ struct FavoritesView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                if segment == .favorites {
-                    favoritesList
-                } else {
-                    recordsList
-                }
+            VStack(spacing: 0) {
+                Picker("内容", selection: $segment) { ForEach(Segment.allCases) { Text($0.rawValue).tag($0) } }
+                    .pickerStyle(.segmented).padding()
+                if segment == .favorites { favoritesList } else { recordsList }
             }
-            .navigationTitle(segment.rawValue)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Picker(segment.rawValue, selection: $segment) {
-                        ForEach(Segment.allCases) { Text($0.rawValue).tag($0) }
-                    }
-                    .pickerStyle(.menu)
-                }
-            }
+            .navigationTitle("地点")
             .sheet(item: $editingPlace) { place in FavoriteEditor(place: place) }
         }
     }
 
-    @ViewBuilder
     private var favoritesList: some View {
-        if store.favorites.isEmpty {
-            ContentUnavailableView("暂无收藏", systemImage: "star")
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-        } else {
-            ForEach(store.favorites) { place in
-                Button { model.load(place.selection) } label: {
-                    PlaceRow(title: place.name, selection: place.selection, trailing: nil)
-                }.swipeActions(edge: .leading) {
-                    Button("编辑") { editingPlace = place }.tint(.blue)
+        Group {
+            if store.favorites.isEmpty { ContentUnavailableView("暂无收藏", systemImage: "star") }
+            else {
+                List {
+                    ForEach(store.favorites) { place in
+                        Button { model.load(place.selection) } label: {
+                            PlaceRow(title: place.name, selection: place.selection, trailing: nil)
+                        }.swipeActions(edge: .leading) {
+                            Button("编辑") { editingPlace = place }.tint(.blue)
+                        }
+                    }.onDelete(perform: store.removeFavorite)
                 }
             }
-            .onDelete(perform: store.removeFavorite)
         }
     }
 
-    @ViewBuilder
     private var recordsList: some View {
-        if store.records.isEmpty {
-            ContentUnavailableView("暂无记录", systemImage: "clock")
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-        } else {
-            ForEach(store.records) { record in
-                Button { model.load(record.selection) } label: {
-                    PlaceRow(title: record.selection.address, selection: record.selection, trailing: record.result == .success ? "成功" : "失败")
+        Group {
+            if store.records.isEmpty { ContentUnavailableView("暂无记录", systemImage: "clock") }
+            else {
+                List {
+                    ForEach(store.records) { record in
+                        Button { model.load(record.selection) } label: {
+                            PlaceRow(title: record.selection.address, selection: record.selection, trailing: record.result == .success ? "成功" : "失败")
+                        }
+                    }.onDelete(perform: store.removeRecord)
                 }
             }
-            .onDelete(perform: store.removeRecord)
         }
     }
 }
