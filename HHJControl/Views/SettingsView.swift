@@ -14,7 +14,7 @@ struct SettingsView: View {
                 Button("打开系统设置") { if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) } }
             }
             Section("关于") {
-                LabeledContent("应用", value: "HHJControl")
+                LabeledContent("应用", value: "Motus")
                 LabeledContent("版本", value: version)
                 Link("国外地址来源:Geoapify", destination: URL(string: "https://www.geoapify.com/")!)
             }

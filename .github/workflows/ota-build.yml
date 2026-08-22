@@ -16,7 +16,7 @@ on:
       appName:
         description: Display and release name
         required: true
-        default: HHJControl
+        default: Motus
 
 permissions:
   contents: write
