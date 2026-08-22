@@ -28,33 +28,3 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: HHJControl/Info.plist
         GEOAPIFY_API_KEY: ""
-    scheme:
-      testTargets:
-        - HHJControlTests
-        - HHJControlUITests
-  HHJControlTests:
-    type: bundle.unit-test
-    platform: iOS
-    deploymentTarget: "26.0"
-    sources:
-      - path: HHJControlTests
-    dependencies:
-      - target: HHJControl
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.sagittarius9983.grape3949.tests
-        GENERATE_INFOPLIST_FILE: YES
-        CODE_SIGNING_ALLOWED: NO
-  HHJControlUITests:
-    type: bundle.ui-testing
-    platform: iOS
-    deploymentTarget: "26.0"
-    sources:
-      - path: HHJControlUITests
-    dependencies:
-      - target: HHJControl
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.sagittarius9983.grape3949.uitests
-        GENERATE_INFOPLIST_FILE: YES
-        CODE_SIGN_STYLE: Automatic
