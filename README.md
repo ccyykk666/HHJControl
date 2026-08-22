@@ -13,3 +13,7 @@ App 本身不能通过公开 iOS API 修改系统定位。实际效果依赖兼�
 - 海拔编辑、收藏、最近记录与遮盖认证信息的诊断日志
 - 原生 iOS 26 Tab/Search 与 Liquid Glass
 - 本机 Codable JSON 存储；无账号、统计 SDK 或第三方 Framework
+
+## 下载与安装
+
+最新版本与 IPA 下载位于 [Releases](https://github.com/ccyykk666/HHJControl/releases)。请使用 iPhone Safari 打开 [在线安装页](https://ccyykk666.github.io/HHJControl/) 安装。
