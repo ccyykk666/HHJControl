@@ -238,7 +238,7 @@ jobs:
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create '${{ steps.meta.outputs.tag }}' dist/HHJControl.ipa dist/manifest.plist dist/install.html --title '${{ inputs.appName }} ${{ steps.meta.outputs.tag }}' --notes 'iOS 26 native HHJControl build ${{ github.run_number }} (${{ inputs.method }}).'
+        run: gh release create '${{ steps.meta.outputs.tag }}' dist/HHJControl.ipa --title '${{ inputs.appName }} ${{ steps.meta.outputs.tag }}' --notes 'iOS 26 native HHJControl build ${{ github.run_number }} (${{ inputs.method }}).'
 
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
