@@ -41,7 +41,7 @@ struct LocationView: View {
                     if showConnectionNotice {
                         Label("设备已连接", systemImage: "checkmark.circle.fill")
                             .font(.callout.weight(.medium))
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(.green)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 10)
                             .glassEffect(.regular, in: .capsule)
