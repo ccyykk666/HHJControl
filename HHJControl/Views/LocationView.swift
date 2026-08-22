@@ -13,6 +13,8 @@ struct LocationView: View {
     @State private var sendButtonState: SendButtonState = .idle
     @State private var sendFeedbackTask: Task<Void, Never>?
     @State private var favoriteAnimationTrigger = 0
+    @State private var showConnectionNotice = false
+    @State private var connectionNoticeTask: Task<Void, Never>?
 
     var body: some View {
         NavigationStack {
@@ -34,6 +36,21 @@ struct LocationView: View {
                 MapTopBlurView()
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
+
+                VStack {
+                    if showConnectionNotice {
+                        Label("设备已连接", systemImage: "checkmark.circle.fill")
+                            .font(.callout.weight(.medium))
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .glassEffect(.regular, in: .capsule)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+                    Spacer()
+                }
+                .padding(.top, 8)
+                .allowsHitTesting(false)
 
                 Image(systemName: "plus")
                     .font(.title2.weight(.medium))
@@ -135,6 +152,27 @@ struct LocationView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showDevices) { DeviceView() }
+            .onChange(of: bluetooth.state) { _, state in
+                guard state == .ready, !showDevices else { return }
+                showConnectedNotice()
+            }
+            .onDisappear {
+                connectionNoticeTask?.cancel()
+            }
+        }
+    }
+
+    private func showConnectedNotice() {
+        connectionNoticeTask?.cancel()
+        withAnimation(.easeOut(duration: 0.2)) {
+            showConnectionNotice = true
+        }
+        connectionNoticeTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(1_500))
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeIn(duration: 0.2)) {
+                showConnectionNotice = false
+            }
         }
     }
 
